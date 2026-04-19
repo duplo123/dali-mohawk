@@ -4,7 +4,7 @@
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/(state|find|seed|clue|admin/.*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-store" }
       ]

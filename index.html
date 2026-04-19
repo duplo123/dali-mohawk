@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#3b2a1a" />
+  <title>The Quest for the Mohawk Trail Treasures</title>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Pirata+One&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --ink: #3b2a1a;
+      --ink-soft: #5a4328;
+      --sepia: #8b5a2b;
+      --oxblood: #a0332b;
+      --parchment-1: #f4e4bc;
+      --parchment-2: #e8d093;
+      --parchment-edge: #8a6a3a;
+    }
+
+    body {
+      font-family: "IM Fell English", "Iowan Old Style", Georgia, serif;
+      color: var(--ink);
+      /* Aged parchment: warm gradient + darkened vignette at edges + paper noise */
+      background-color: var(--parchment-1);
+      background-image:
+        radial-gradient(ellipse at 20% 10%, rgba(255, 245, 210, 0.9) 0%, rgba(255, 245, 210, 0) 55%),
+        radial-gradient(ellipse at 80% 90%, rgba(255, 245, 210, 0.6) 0%, rgba(255, 245, 210, 0) 55%),
+        radial-gradient(ellipse at 50% 50%, rgba(244, 228, 188, 0) 40%, rgba(120, 85, 40, 0.35) 100%),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.29  0 0 0 0 0.20  0 0 0 0 0.10  0 0 0 0.10 0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.6'/></svg>"),
+        linear-gradient(135deg, var(--parchment-1) 0%, var(--parchment-2) 100%);
+    }
+
+    /* Burnt/torn edge vignette overlay */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      box-shadow:
+        inset 0 0 120px rgba(80, 50, 20, 0.45),
+        inset 0 0 40px rgba(60, 35, 10, 0.35);
+    }
+
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .display-font {
+      font-family: "Pirata One", "IM Fell English SC", "Luminari", serif;
+      letter-spacing: 0.02em;
+    }
+
+    .smallcaps {
+      font-family: "IM Fell English SC", "IM Fell English", Georgia, serif;
+      letter-spacing: 0.08em;
+    }
+
+    /* Parchment card: lighter than base, inked border, soft inner shadow */
+    .card {
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(255, 250, 225, 0.7), rgba(255, 250, 225, 0) 60%),
+        linear-gradient(135deg, #fbeecb 0%, #f0dba0 100%);
+      border: 1.5px solid var(--sepia);
+      box-shadow:
+        inset 0 0 24px rgba(139, 90, 43, 0.18),
+        0 2px 6px rgba(60, 35, 10, 0.25);
+      border-radius: 6px;
+      position: relative;
+    }
+
+    .card-tilt-left { transform: rotate(-0.6deg); }
+    .card-tilt-right { transform: rotate(0.6deg); }
+
+    /* Region badge: hand-inked stamp look */
+    .region-badge {
+      font-family: "IM Fell English SC", serif;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 10px;
+      padding: 4px 10px;
+      border: 1px solid var(--ink);
+      background: rgba(255, 245, 210, 0.5);
+      color: var(--ink);
+      border-radius: 2px;
+    }
+
+    /* "We found it!" stamp button */
+    .stamp-btn {
+      font-family: "Pirata One", serif;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      background: var(--oxblood);
+      color: #fdf4d8;
+      border: 2px solid #6b1f18;
+      border-radius: 3px;
+      padding: 10px 14px;
+      box-shadow: 0 2px 0 #6b1f18, inset 0 0 12px rgba(0,0,0,0.25);
+      transition: transform 0.08s ease;
+    }
+    .stamp-btn:hover { transform: translateY(-1px) rotate(-0.5deg); }
+    .stamp-btn:active { transform: translateY(1px); box-shadow: 0 0 0 #6b1f18, inset 0 0 12px rgba(0,0,0,0.3); }
+
+    /* Secondary ink button (Ask Grumblestone, refresh, etc.) */
+    .ink-btn {
+      font-family: "IM Fell English SC", serif;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: rgba(139, 90, 43, 0.12);
+      color: var(--ink);
+      border: 1px dashed var(--sepia);
+      border-radius: 3px;
+      padding: 8px 12px;
+      transition: background 0.15s;
+    }
+    .ink-btn:hover { background: rgba(139, 90, 43, 0.25); }
+
+    /* Ogre / clue panel: torn scroll */
+    .scroll-panel {
+      background: linear-gradient(180deg, #f7e6b8 0%, #ead295 100%);
+      border-left: 1px solid var(--sepia);
+      border-right: 1px solid var(--sepia);
+      color: var(--ink);
+      padding: 14px 16px;
+      margin-top: 12px;
+      position: relative;
+      clip-path: polygon(
+        0% 6%, 4% 0%, 12% 4%, 22% 1%, 34% 5%, 48% 2%, 62% 6%, 76% 2%, 88% 6%, 96% 1%, 100% 5%,
+        100% 94%, 96% 100%, 88% 95%, 76% 99%, 62% 94%, 48% 98%, 34% 95%, 22% 99%, 12% 96%, 4% 100%, 0% 94%
+      );
+    }
+
+    /* Found overlay stamp */
+    .found-stamp {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      transform: rotate(-12deg);
+      font-family: "Pirata One", serif;
+      font-size: 22px;
+      letter-spacing: 0.15em;
+      color: var(--oxblood);
+      border: 3px double var(--oxblood);
+      padding: 2px 10px;
+      opacity: 0.85;
+      pointer-events: none;
+    }
+
+    /* Header: looks like a burnt banner */
+    .map-header {
+      background:
+        linear-gradient(180deg, rgba(59, 42, 26, 0.95) 0%, rgba(80, 55, 30, 0.92) 100%);
+      color: #f7e6b8;
+      border-bottom: 2px solid var(--ink);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Leaderboard row */
+    .board-row {
+      background: linear-gradient(135deg, #fbeecb 0%, #f0dba0 100%);
+      border: 1px solid var(--sepia);
+      border-radius: 4px;
+    }
+    .board-row.is-me {
+      border-color: var(--oxblood);
+      box-shadow: 0 0 0 1px var(--oxblood);
+    }
+
+    /* Dashed trail between sections */
+    .trail-divider {
+      height: 24px;
+      background-image: radial-gradient(circle, var(--sepia) 1.5px, transparent 2px);
+      background-size: 16px 24px;
+      background-repeat: repeat-x;
+      background-position: center;
+      opacity: 0.6;
+    }
+
+    main, header { position: relative; z-index: 2; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-10 map-header backdrop-blur">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div>
+        <h1 class="display-font text-2xl">🗺️ Mohawk Trail Hunt</h1>
+        <p id="familyLabel" class="smallcaps text-[11px] text-amber-100/80"></p>
+      </div>
+      <button id="switchFamilyBtn" class="smallcaps text-[11px] text-amber-200 hover:text-amber-100 underline hidden">Switch crew</button>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+    <!-- Family picker (shown when no family selected) -->
+    <section id="familyPicker" class="hidden">
+      <div class="card p-6">
+        <h2 class="display-font text-3xl mb-2">Welcome, treasure hunter!</h2>
+        <p class="smallcaps text-sm mb-4" style="color: var(--ink-soft);">Which crew do ye sail with?</p>
+        <select id="familySelect" class="w-full rounded px-3 py-3 bg-[#fdf4d8] border border-[color:var(--sepia)] text-[color:var(--ink)] text-base mb-3" style="font-family: inherit;">
+          <option value="">— Pick your crew —</option>
+        </select>
+        <button id="confirmFamilyBtn" class="stamp-btn w-full disabled:opacity-40">
+          Begin the Hunt
+        </button>
+        <p id="noFamiliesMsg" class="text-xs mt-3 hidden italic" style="color: var(--ink-soft);">
+          No crews charted yet — ask whoever set this up to add yours.
+        </p>
+      </div>
+    </section>
+
+    <!-- Locations -->
+    <section id="locationsSection" class="hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="display-font text-3xl">The Eight Treasures</h2>
+        <button id="refreshBtn" class="smallcaps text-xs hover:text-[color:var(--oxblood)]" style="color: var(--ink-soft);">✦ Redraw the map</button>
+      </div>
+      <div id="locationGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-5"></div>
+    </section>
+
+    <div class="trail-divider"></div>
+
+    <!-- Leaderboard -->
+    <section id="leaderboardSection" class="hidden">
+      <h2 class="display-font text-3xl mb-4">⚔ The Roster of Bounty</h2>
+      <div id="leaderboard" class="space-y-2"></div>
+    </section>
+
+    <!-- Loading -->
+    <div id="loading" class="text-center italic py-12" style="color: var(--ink-soft);">Unrolling the map...</div>
+
+    <!-- Error -->
+    <div id="error" class="hidden border rounded p-4 text-sm" style="background: rgba(160, 51, 43, 0.15); border-color: var(--oxblood); color: var(--oxblood);"></div>
+
+  </main>
+
+  <!-- Find confirmation modal -->
+  <div id="modal" class="hidden fixed inset-0 bg-[#3b2a1a]/80 backdrop-blur-sm z-20 flex items-center justify-center p-4">
+    <div class="card p-6 max-w-sm w-full fade-in">
+      <h3 class="display-font text-2xl mb-2">Upon yer honor...</h3>
+      <p class="text-sm mb-1" style="color: var(--ink-soft);">Are ye truly standing at:</p>
+      <p id="modalLocationName" class="display-font text-xl mb-4" style="color: var(--oxblood);"></p>
+      <div class="flex gap-2">
+        <button id="modalCancelBtn" class="ink-btn flex-1">
+          Not yet
+        </button>
+        <button id="modalConfirmBtn" class="stamp-btn flex-1">
+          Aye, we're here!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // -------- Config --------
+    const REGION_STYLES = {
+      "Western Kingdom":   { emoji: "⛰️" },
+      "River Realm":       { emoji: "🌊" },
+      "Eastern Outposts":  { emoji: "🌲" },
+    };
+
+    // -------- State --------
+    let state = null;
+    let familyId = localStorage.getItem("familyId") || null;
+    let pendingLocationId = null;
+    const loadingOgre = new Set(); // keys: `${locationId}|${mode}`
+    const ogreErrors = new Map();  // same keys → error message
+
+    // -------- DOM helpers --------
+    const $ = (id) => document.getElementById(id);
+    const show = (el) => el.classList.remove("hidden");
+    const hide = (el) => el.classList.add("hidden");
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    function formatTime(iso) {
+      const d = new Date(iso);
+      const now = new Date();
+      const sameDay = d.toDateString() === now.toDateString();
+      return sameDay
+        ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+        : d.toLocaleDateString([], { month: "short", day: "numeric" });
+    }
+
+    // -------- API --------
+    async function fetchState() {
+      const res = await fetch("/api/state", { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load state");
+      return res.json();
+    }
+
+    async function postFind(locationId) {
+      const res = await fetch("/api/find", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ familyId, locationId }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to record find");
+      }
+      return res.json();
+    }
+
+    async function fetchOgre(locationId, mode) {
+      const res = await fetch("/api/clue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId, mode }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "The ogre is asleep");
+      return data.text;
+    }
+
+    // -------- Render --------
+    function render() {
+      if (!state) return;
+
+      const family = state.families.find((f) => f.id === familyId);
+
+      // No family picked (or stored id is stale): show picker
+      if (!family) {
+        if (familyId) {
+          localStorage.removeItem("familyId");
+          familyId = null;
+        }
+        renderFamilyPicker();
+        hide($("locationsSection"));
+        hide($("leaderboardSection"));
+        hide($("switchFamilyBtn"));
+        $("familyLabel").textContent = "";
+        return;
+      }
+
+      hide($("familyPicker"));
+      show($("locationsSection"));
+      show($("leaderboardSection"));
+      show($("switchFamilyBtn"));
+      $("familyLabel").textContent = `Playing as ${family.name}`;
+
+      renderLocations(family);
+      renderLeaderboard();
+    }
+
+    function renderFamilyPicker() {
+      const select = $("familySelect");
+      const confirmBtn = $("confirmFamilyBtn");
+      const noFamiliesMsg = $("noFamiliesMsg");
+
+      select.innerHTML = '<option value="">— Pick your family —</option>' +
+        state.families
+          .map((f) => `<option value="${escapeHtml(f.id)}">${escapeHtml(f.name)}</option>`)
+          .join("");
+
+      if (state.families.length === 0) {
+        select.disabled = true;
+        confirmBtn.disabled = true;
+        show(noFamiliesMsg);
+      } else {
+        select.disabled = false;
+        hide(noFamiliesMsg);
+      }
+
+      show($("familyPicker"));
+    }
+
+    function renderLocations(family) {
+      const grid = $("locationGrid");
+      const myFinds = new Map(
+        state.finds
+          .filter((f) => f.familyId === family.id)
+          .map((f) => [f.locationId, f.foundAt])
+      );
+
+      // Map of locationId -> array of family names who found it (for "dimmed" signal)
+      const findsByLocation = new Map();
+      for (const find of state.finds) {
+        if (!findsByLocation.has(find.locationId)) findsByLocation.set(find.locationId, []);
+        findsByLocation.get(find.locationId).push(find.familyId);
+      }
+
+      grid.innerHTML = state.locations.map((loc, idx) => {
+        const style = REGION_STYLES[loc.region] || { emoji: "📍" };
+        const myFoundAt = myFinds.get(loc.id);
+        const otherFinders = (findsByLocation.get(loc.id) || [])
+          .filter((fid) => fid !== family.id)
+          .map((fid) => state.families.find((f) => f.id === fid)?.name)
+          .filter(Boolean);
+
+        const cache = state.ogreCache?.[loc.id] || {};
+        const mode = myFoundAt ? "success" : "clue";
+        const ogreText = cache[mode];
+        const ogreKey = `${loc.id}|${mode}`;
+        const ogreLoading = loadingOgre.has(ogreKey);
+        const ogreError = ogreErrors.get(ogreKey);
+
+        const ogrePanel = (ogreText || ogreLoading || ogreError) ? `
+          <div class="scroll-panel">
+            <p class="smallcaps text-[11px] mb-2" style="color: var(--oxblood);">
+              🧌 Grumblestone ${mode === "success" ? "welcomes ye" : "grumbles"}${ogreLoading ? "..." : ""}
+            </p>
+            ${ogreLoading
+              ? `<p class="text-sm italic animate-pulse" style="color: var(--ink-soft);">*grumble grumble*</p>`
+              : ogreError
+                ? `<p class="text-sm italic" style="color: var(--oxblood);">The ogre slumbers. (${escapeHtml(ogreError)})</p>`
+                : `
+                  <p class="text-[15px] italic leading-relaxed" style="color: var(--ink);">${escapeHtml(ogreText)}</p>
+                  <audio controls preload="none" class="w-full mt-3 h-9" src="/api/tts?locationId=${encodeURIComponent(loc.id)}&mode=${encodeURIComponent(mode)}&v=${state.audioVersion || 0}">
+                    Your browser does not support audio playback.
+                  </audio>
+                `
+            }
+          </div>` : "";
+
+        let footer;
+        if (myFoundAt) {
+          footer = `
+            <div class="mt-3 smallcaps text-sm" style="color: #3d6b3d;">
+              ✦ Claimed ${escapeHtml(formatTime(myFoundAt))}
+            </div>
+            ${ogrePanel}
+          `;
+        } else {
+          const ogreBtn = (ogreText || ogreLoading) ? "" : `
+            <button data-ogre="${escapeHtml(loc.id)}" class="ogreBtn ink-btn mt-2 w-full text-sm">
+              🗣️ Consult Grumblestone
+            </button>
+          `;
+          footer = `
+            <button data-find="${escapeHtml(loc.id)}" class="findBtn stamp-btn mt-3 w-full">
+              X marks the spot!
+            </button>
+            ${ogreBtn}
+            ${ogrePanel}
+            ${otherFinders.length > 0 ? `<p class="mt-2 text-xs italic" style="color: var(--ink-soft);">Already claimed by: ${escapeHtml(otherFinders.join(", "))}</p>` : ""}
+          `;
+        }
+
+        const tiltClass = idx % 2 === 0 ? "card-tilt-left" : "card-tilt-right";
+
+        return `
+          <div class="card ${tiltClass} p-5 fade-in">
+            ${myFoundAt ? `<div class="found-stamp">FOUND</div>` : ""}
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div>
+                <div class="smallcaps text-[10px] mb-1" style="color: var(--sepia);">№ ${idx + 1}</div>
+                <h3 class="display-font text-2xl leading-tight">${escapeHtml(loc.name)}</h3>
+                <p class="text-xs italic" style="color: var(--ink-soft);">${escapeHtml(loc.realName)}</p>
+              </div>
+              <span class="region-badge whitespace-nowrap">
+                ${style.emoji} ${escapeHtml(loc.region)}
+              </span>
+            </div>
+            <p class="text-[15px] italic mt-2 leading-relaxed" style="color: var(--ink);">"${escapeHtml(loc.baseClue)}"</p>
+            ${footer}
+          </div>
+        `;
+      }).join("");
+
+      // Wire find buttons
+      grid.querySelectorAll(".findBtn").forEach((btn) => {
+        btn.addEventListener("click", () => openFindModal(btn.dataset.find));
+      });
+      grid.querySelectorAll(".ogreBtn").forEach((btn) => {
+        btn.addEventListener("click", () => askOgre(btn.dataset.ogre, "clue"));
+      });
+    }
+
+    function renderLeaderboard() {
+      const rows = state.families.map((f) => {
+        const theirFinds = state.finds.filter((x) => x.familyId === f.id);
+        const lastFind = theirFinds
+          .map((x) => x.foundAt)
+          .sort()
+          .pop();
+        return { family: f, count: theirFinds.length, lastFind };
+      });
+
+      rows.sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        // Tiebreaker: earlier last-find wins (rewards finishing sooner)
+        if (a.lastFind && b.lastFind) return a.lastFind.localeCompare(b.lastFind);
+        return 0;
+      });
+
+      const board = $("leaderboard");
+      if (rows.length === 0) {
+        board.innerHTML = `<p class="text-sm italic" style="color: var(--ink-soft);">No crews yet.</p>`;
+        return;
+      }
+
+      const medals = ["🥇", "🥈", "🥉"];
+      board.innerHTML = rows.map((r, i) => {
+        const isMe = r.family.id === familyId;
+        return `
+          <div class="board-row ${isMe ? "is-me" : ""} flex items-center justify-between px-4 py-3">
+            <div class="flex items-center gap-3">
+              <span class="text-xl w-7 text-center">${medals[i] || i + 1}</span>
+              <div>
+                <p class="display-font text-xl" style="color: ${isMe ? "var(--oxblood)" : "var(--ink)"};">${escapeHtml(r.family.name)}${isMe ? " (ye)" : ""}</p>
+                ${r.lastFind ? `<p class="text-xs italic" style="color: var(--ink-soft);">Last claim ${escapeHtml(formatTime(r.lastFind))}</p>` : `<p class="text-xs italic" style="color: var(--ink-soft);">No bounty yet</p>`}
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="display-font text-3xl" style="color: var(--ink);">${r.count}</p>
+              <p class="smallcaps text-[10px]" style="color: var(--ink-soft);">of ${state.locations.length}</p>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // -------- Ogre --------
+    async function askOgre(locationId, mode) {
+      const key = `${locationId}|${mode}`;
+      if (loadingOgre.has(key)) return;
+
+      // Already cached? Just ensure it's reflected in state and re-render.
+      if (state.ogreCache?.[locationId]?.[mode]) {
+        render();
+        return;
+      }
+
+      loadingOgre.add(key);
+      ogreErrors.delete(key);
+      render();
+
+      try {
+        const text = await fetchOgre(locationId, mode);
+        state.ogreCache = state.ogreCache || {};
+        state.ogreCache[locationId] = state.ogreCache[locationId] || {};
+        state.ogreCache[locationId][mode] = text;
+      } catch (err) {
+        ogreErrors.set(key, err.message);
+      } finally {
+        loadingOgre.delete(key);
+        render();
+      }
+    }
+
+    // -------- Find flow --------
+    function openFindModal(locationId) {
+      const loc = state.locations.find((l) => l.id === locationId);
+      if (!loc) return;
+      pendingLocationId = locationId;
+      $("modalLocationName").textContent = `${loc.name} (${loc.realName})`;
+      show($("modal"));
+    }
+
+    function closeModal() {
+      pendingLocationId = null;
+      hide($("modal"));
+    }
+
+    async function confirmFind() {
+      if (!pendingLocationId || !familyId) return closeModal();
+      const locationId = pendingLocationId;
+
+      // Optimistic update
+      const optimisticFind = {
+        familyId,
+        locationId,
+        foundAt: new Date().toISOString(),
+      };
+      const alreadyInState = state.finds.some(
+        (f) => f.familyId === familyId && f.locationId === locationId
+      );
+      if (!alreadyInState) state.finds.push(optimisticFind);
+      closeModal();
+      render();
+
+      try {
+        const result = await postFind(locationId);
+        if (result.state) {
+          state = result.state;
+          render();
+        }
+        // Fire-and-forget: kick off the ogre's success message
+        askOgre(locationId, "success");
+      } catch (err) {
+        showError(err.message);
+        await loadState();
+      }
+    }
+
+    // -------- Init / events --------
+    async function loadState() {
+      try {
+        hide($("error"));
+        state = await fetchState();
+        hide($("loading"));
+        render();
+      } catch (err) {
+        hide($("loading"));
+        showError(err.message);
+      }
+    }
+
+    function showError(msg) {
+      const el = $("error");
+      el.textContent = "⚠️ " + msg;
+      show(el);
+    }
+
+    $("confirmFamilyBtn").addEventListener("click", () => {
+      const id = $("familySelect").value;
+      if (!id) return;
+      familyId = id;
+      localStorage.setItem("familyId", id);
+      render();
+    });
+
+    $("switchFamilyBtn").addEventListener("click", () => {
+      localStorage.removeItem("familyId");
+      familyId = null;
+      render();
+    });
+
+    $("refreshBtn").addEventListener("click", loadState);
+    $("modalCancelBtn").addEventListener("click", closeModal);
+    $("modalConfirmBtn").addEventListener("click", confirmFind);
+    $("modal").addEventListener("click", (e) => {
+      if (e.target === $("modal")) closeModal();
+    });
+
+    // Register service worker
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+      });
+    }
+
+    loadState();
+  </script>
+</body>
+</html>

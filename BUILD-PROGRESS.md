@@ -1,3 +1,41 @@
+# Phase 4: ElevenLabs TTS (Gate 3) — Grumblestone Speaks Aloud
+
+## Build Progress
+
+### DONE
+- **`api/tts.js`** — GET endpoint `?locationId=X&mode=clue|success`. Reads the ogre text from `hunt:state`, checks a per-location KV key (`hunt:audio:{locationId}:{mode}`) for cached MP3 bytes, calls ElevenLabs `text-to-speech/{voice_id}` (model `eleven_multilingual_v2`) on cache miss, stores bytes base64-encoded in KV, and serves `audio/mpeg` with long-cache headers. Previously wired to Cartesia — swapped for ElevenLabs to access their monster/creature voice library.
+- **`vercel.json`** — scoped the `no-store` Cache-Control rule to only the JSON endpoints (`state|find|seed|clue|admin/.*`), letting `/api/tts` set its own `public, max-age=31536000, immutable`.
+- **`index.html`** — native `<audio controls preload="none">` element below each Grumblestone panel, pointing at `/api/tts?locationId=...&mode=...`.
+- **`sw.js`** — cache bumped to `v3` so SW invalidates old shell.
+
+### TODO
+- **Env vars** — set `ELEVENLABS_API_KEY` and `ELEVENLABS_VOICE_ID` in Vercel production. Remove the old `CARTESIA_*` vars if they were set.
+- **Deploy** — `vercel --prod`, then hard-reload to pick up new SW.
+- **Smoke test** — tap play on a Grumblestone panel. First tap ~2–3s while ElevenLabs generates; subsequent taps from anyone serve from KV + edge cache.
+
+---
+
+# Phase 3: Grumblestone (Gate 2) — Ogre Persona Clues
+
+## Build Progress
+
+### DONE
+- **`api/clue.js`** — POST endpoint. Body `{ locationId, mode: "clue"|"success" }`. Reads `hunt:state` from KV, checks `ogreCache[locationId][mode]` for a cache hit, otherwise calls Anthropic's Messages API (`claude-haiku-4-5`) with the Grumblestone system prompt, caches the result, and returns `{ text, cached }`. Graceful 502 on API failure so UI shows fallback.
+- **`index.html`** ogre integration:
+  - "🗣️ Ask Grumblestone" button on not-yet-found cards (hidden once commissioned)
+  - Parchment-style scroll panel renders cached clue/success text under each card
+  - Loading state (`*grumble grumble*` animate-pulse) while Gemini responds
+  - Error state falls back to just the base clue
+  - Success message auto-fires on find (fire-and-forget after POST /api/find)
+  - In-memory `loadingOgre` Set + `ogreErrors` Map for per-card UI state
+
+### TODO
+- **Env var** — set `ANTHROPIC_API_KEY` in Vercel (`vercel env add ANTHROPIC_API_KEY production`). If `GEMINI_API_KEY` was previously set, it's no longer used and can be removed (`vercel env rm GEMINI_API_KEY production`).
+- **Deploy** — `vercel --prod`
+- **Smoke test** — tap "Ask Grumblestone" on a few cards, confirm cached on second family
+
+---
+
 # Phase 1: Gate 1 MVP — Mohawk Trail Hunt App
 
 ## Build Progress
@@ -12,12 +50,14 @@
   - `api/admin/family.js` — POST add/remove family (admin-keyed)
   - `api/admin/reset.js` — POST reset family or all (admin-keyed)
 - **PWA shell** — `manifest.json` and `sw.js` created
+- **Step 3: `index.html`** — Family-facing hunt page. Tailwind CDN + vanilla JS. Includes family picker (localStorage-backed), 8-card location grid with region-color badges, find flow with honor-system confirm modal + optimistic update, leaderboard with medals, and service worker registration.
+- **Step 4: `admin.html`** — Admin screen. Key-gated (URL `?key=` or inline prompt). Family management (add/remove/reset), find-override matrix (family × location toggle grid), global reset with type-to-confirm, one-click seed, raw state JSON dump, toast notifications.
+- **Vercel infra** — Project linked, KV (Upstash Redis) provisioned, `ADMIN_KEY` set, deployed to production.
 
 ### IN PROGRESS
-- **Step 3: `index.html`** — Family-facing hunt page. NOT YET CREATED. This is the next file to write. See Step 3 spec below for full requirements (family picker, location grid, find flow, leaderboard). Single HTML file with Tailwind CDN + vanilla JS.
+- **Step 5 / 6: Seed + test** — Hit `/api/seed?key=<ADMIN_KEY>` to populate locations (or click the Seed button in admin.html after next deploy). Then add families and smoke-test the family flow.
 
 ### TODO
-- **Step 4: `admin.html`** — Admin screen. Not started.
 - **Step 5: Seed data** — Baked into `api/seed.js` already, just needs to be called after deploy.
 - **Step 6: Deploy & test** — `npm install`, Vercel project setup (manual), deploy, seed, test.
 - **Vercel infra (manual)** — `vercel login`, create project, add KV store, set `ADMIN_KEY` env var. Not done yet.

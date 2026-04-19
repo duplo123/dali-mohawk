@@ -32,9 +32,21 @@ export default async function handler(req, res) {
     state.finds = [];
     state.families = [];
     state.ogreCache = {};
+    state.audioVersion = (state.audioVersion || 0) + 1;
     await kv.set("hunt:state", state);
+    const audioKeys = await kv.keys("hunt:audio:*");
+    if (audioKeys.length) await kv.del(...audioKeys);
     return res.status(200).json({ message: "Everything reset (locations kept)", state });
   }
 
-  return res.status(400).json({ error: 'scope must be "family" or "all"' });
+  if (scope === "ogre") {
+    state.ogreCache = {};
+    state.audioVersion = (state.audioVersion || 0) + 1;
+    await kv.set("hunt:state", state);
+    const audioKeys = await kv.keys("hunt:audio:*");
+    if (audioKeys.length) await kv.del(...audioKeys);
+    return res.status(200).json({ message: "Grumblestone cache flushed", state });
+  }
+
+  return res.status(400).json({ error: 'scope must be "family", "ogre", or "all"' });
 }

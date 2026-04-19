@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#16213e" />
+  <meta name="robots" content="noindex" />
+  <title>Admin — Mohawk Trail Hunt</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+  <header class="sticky top-0 z-10 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <h1 class="text-lg font-bold">🛠️ Hunt Admin</h1>
+        <span id="keyBadge" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 hidden"></span>
+      </div>
+      <a href="/" class="text-xs text-slate-400 hover:text-slate-200 underline">← family view</a>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-6 space-y-8">
+
+    <!-- Key gate (shown when no key / invalid key) -->
+    <section id="keyGate" class="hidden">
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 max-w-md mx-auto">
+        <h2 class="text-lg font-bold mb-2">🔒 Admin key required</h2>
+        <p id="keyGateMsg" class="text-sm text-slate-400 mb-4">Add your admin key to continue.</p>
+        <input id="keyInput" type="password" placeholder="Admin key" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm mb-3" />
+        <button id="keySubmitBtn" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 rounded-lg">Unlock</button>
+      </div>
+    </section>
+
+    <!-- Admin content -->
+    <div id="adminContent" class="hidden space-y-8">
+
+      <!-- Summary / seed -->
+      <section id="summarySection" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-3">
+          <p class="text-xs text-slate-500 uppercase">Families</p>
+          <p id="statFamilies" class="text-2xl font-bold">—</p>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-3">
+          <p class="text-xs text-slate-500 uppercase">Locations</p>
+          <p id="statLocations" class="text-2xl font-bold">—</p>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-3">
+          <p class="text-xs text-slate-500 uppercase">Total Finds</p>
+          <p id="statFinds" class="text-2xl font-bold">—</p>
+        </div>
+        <div class="bg-slate-800/60 border border-slate-700 rounded-lg p-3 flex flex-col justify-between">
+          <p class="text-xs text-slate-500 uppercase">Seed</p>
+          <button id="seedBtn" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded mt-1">
+            Seed 8 locations
+          </button>
+        </div>
+      </section>
+
+      <!-- Families -->
+      <section>
+        <h2 class="text-lg font-bold mb-3">👥 Families</h2>
+        <div class="flex gap-2 mb-4">
+          <input id="newFamilyInput" type="text" placeholder="Family name (e.g. The Smiths)" class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm" />
+          <button id="addFamilyBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg text-sm">Add</button>
+        </div>
+        <div id="familiesList" class="space-y-2"></div>
+      </section>
+
+      <!-- Find overrides matrix -->
+      <section>
+        <h2 class="text-lg font-bold mb-3">✅ Find Overrides</h2>
+        <p class="text-xs text-slate-400 mb-3">Tap a cell to toggle a find on/off for that family.</p>
+        <div id="matrixWrapper" class="overflow-x-auto border border-slate-700 rounded-lg">
+          <table id="findMatrix" class="w-full text-sm"></table>
+        </div>
+      </section>
+
+      <!-- Reset controls -->
+      <section>
+        <h2 class="text-lg font-bold mb-3">♻️ Reset</h2>
+        <div class="bg-amber-950/40 border border-amber-900/60 rounded-lg p-4 mb-3">
+          <p class="text-sm text-amber-200 mb-3">Wipe Grumblestone's saved clues and audio so the next family to open a card gets a fresh generation.</p>
+          <button id="flushOgreBtn" class="bg-amber-700 hover:bg-amber-800 text-white font-semibold px-4 py-2 rounded-lg text-sm">
+            Flush Grumblestone cache
+          </button>
+        </div>
+        <div class="bg-red-950/40 border border-red-900/60 rounded-lg p-4">
+          <p class="text-sm text-red-200 mb-3">Use with care — no undo.</p>
+          <button id="resetAllBtn" class="bg-red-700 hover:bg-red-800 text-white font-semibold px-4 py-2 rounded-lg text-sm">
+            Reset everything (families + finds + ogre)
+          </button>
+          <p class="text-xs text-slate-500 mt-2">Locations are preserved. Per-family resets live on each family card above.</p>
+        </div>
+      </section>
+
+      <!-- Raw state -->
+      <section>
+        <details class="bg-slate-800/50 border border-slate-700 rounded-lg">
+          <summary class="cursor-pointer px-4 py-2 text-sm font-semibold">🔎 Raw state (debug)</summary>
+          <pre id="rawState" class="p-4 text-xs overflow-auto max-h-96 text-slate-400"></pre>
+        </details>
+      </section>
+
+    </div>
+
+    <div id="toast" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm shadow-xl z-20"></div>
+
+  </main>
+
+  <script>
+    // -------- State --------
+    let adminKey = new URL(location.href).searchParams.get("key") || "";
+    let state = null;
+
+    // -------- DOM helpers --------
+    const $ = (id) => document.getElementById(id);
+    const show = (el) => el.classList.remove("hidden");
+    const hide = (el) => el.classList.add("hidden");
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    function toast(msg, isError = false) {
+      const el = $("toast");
+      el.textContent = msg;
+      el.className = `fixed bottom-4 left-1/2 -translate-x-1/2 border rounded-lg px-4 py-2 text-sm shadow-xl z-20 ${
+        isError ? "bg-red-900/90 border-red-700 text-red-100" : "bg-slate-800 border-slate-700 text-slate-100"
+      }`;
+      show(el);
+      clearTimeout(toast._t);
+      toast._t = setTimeout(() => hide(el), 2500);
+    }
+
+    // -------- API --------
+    async function api(path, { method = "GET", body } = {}) {
+      const url = path + (path.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(adminKey);
+      const opts = { method, headers: {} };
+      if (body !== undefined) {
+        opts.headers["Content-Type"] = "application/json";
+        opts.body = JSON.stringify(body);
+      }
+      const res = await fetch(url, opts);
+      if (res.status === 401) {
+        throw new Error("Unauthorized — wrong admin key");
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+      return data;
+    }
+
+    async function loadState() {
+      const data = await api("/api/admin/state");
+      state = data; // GET /api/admin/state returns state directly
+      render();
+    }
+
+    function applyStateFromResponse(data) {
+      // Some endpoints wrap state (`{ message, state }`); /api/admin/state returns it raw.
+      state = data.state || data;
+      render();
+    }
+
+    // -------- Render --------
+    function render() {
+      if (!state) return;
+
+      $("statFamilies").textContent = state.families.length;
+      $("statLocations").textContent = state.locations.length;
+      $("statFinds").textContent = state.finds.length;
+
+      renderFamilies();
+      renderMatrix();
+      $("rawState").textContent = JSON.stringify(state, null, 2);
+    }
+
+    function renderFamilies() {
+      const container = $("familiesList");
+      if (state.families.length === 0) {
+        container.innerHTML = `<p class="text-sm text-slate-500 italic">No families yet. Add one above.</p>`;
+        return;
+      }
+
+      container.innerHTML = state.families.map((f) => {
+        const count = state.finds.filter((x) => x.familyId === f.id).length;
+        return `
+          <div class="flex items-center justify-between bg-slate-800/60 border border-slate-700 rounded-lg px-4 py-3">
+            <div>
+              <p class="font-semibold">${escapeHtml(f.name)}</p>
+              <p class="text-xs text-slate-500">${count}/${state.locations.length} found · ${escapeHtml(f.id)}</p>
+            </div>
+            <div class="flex gap-2">
+              <button data-reset-family="${escapeHtml(f.id)}" class="text-xs bg-amber-900/60 hover:bg-amber-800 text-amber-200 px-3 py-1.5 rounded">Reset finds</button>
+              <button data-remove-family="${escapeHtml(f.id)}" class="text-xs bg-red-900/60 hover:bg-red-800 text-red-200 px-3 py-1.5 rounded">Remove</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      container.querySelectorAll("[data-reset-family]").forEach((btn) => {
+        btn.addEventListener("click", () => resetFamily(btn.dataset.resetFamily));
+      });
+      container.querySelectorAll("[data-remove-family]").forEach((btn) => {
+        btn.addEventListener("click", () => removeFamily(btn.dataset.removeFamily));
+      });
+    }
+
+    function renderMatrix() {
+      const table = $("findMatrix");
+      if (state.families.length === 0 || state.locations.length === 0) {
+        table.innerHTML = `<tr><td class="p-4 text-sm text-slate-500 italic">${
+          state.locations.length === 0 ? "Seed locations first." : "Add a family to enable overrides."
+        }</td></tr>`;
+        return;
+      }
+
+      const findSet = new Set(state.finds.map((f) => `${f.familyId}|${f.locationId}`));
+
+      const header = `
+        <thead class="bg-slate-800/80 text-xs uppercase text-slate-400 sticky top-0">
+          <tr>
+            <th class="text-left p-2 font-semibold">Family</th>
+            ${state.locations.map((l) => `
+              <th class="p-2 font-semibold text-center whitespace-nowrap" title="${escapeHtml(l.realName)}">
+                ${escapeHtml(l.name)}
+              </th>`).join("")}
+          </tr>
+        </thead>`;
+
+      const rows = state.families.map((f) => {
+        const cells = state.locations.map((l) => {
+          const key = `${f.id}|${l.id}`;
+          const found = findSet.has(key);
+          return `
+            <td class="p-1 text-center">
+              <button
+                data-toggle="${escapeHtml(f.id)}|${escapeHtml(l.id)}"
+                data-found="${found}"
+                class="toggleBtn w-9 h-9 rounded ${found ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-slate-700 hover:bg-slate-600 text-slate-400"}"
+                title="${found ? "Found" : "Not found"}">
+                ${found ? "✓" : "·"}
+              </button>
+            </td>`;
+        }).join("");
+
+        return `
+          <tr class="border-t border-slate-700/60">
+            <td class="p-2 font-semibold whitespace-nowrap">${escapeHtml(f.name)}</td>
+            ${cells}
+          </tr>`;
+      }).join("");
+
+      table.innerHTML = header + `<tbody>${rows}</tbody>`;
+
+      table.querySelectorAll(".toggleBtn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const [familyId, locationId] = btn.dataset.toggle.split("|");
+          const currentlyFound = btn.dataset.found === "true";
+          toggleFind(familyId, locationId, !currentlyFound);
+        });
+      });
+    }
+
+    // -------- Actions --------
+    async function addFamily() {
+      const name = $("newFamilyInput").value.trim();
+      if (!name) return;
+      try {
+        const data = await api("/api/admin/family", { method: "POST", body: { action: "add", name } });
+        applyStateFromResponse(data);
+        $("newFamilyInput").value = "";
+        toast(`Added ${name}`);
+      } catch (err) { toast(err.message, true); }
+    }
+
+    async function removeFamily(familyId) {
+      const family = state.families.find((f) => f.id === familyId);
+      if (!family) return;
+      if (!confirm(`Remove "${family.name}" and all their finds? This can't be undone.`)) return;
+      try {
+        const data = await api("/api/admin/family", { method: "POST", body: { action: "remove", familyId } });
+        applyStateFromResponse(data);
+        toast(`Removed ${family.name}`);
+      } catch (err) { toast(err.message, true); }
+    }
+
+    async function resetFamily(familyId) {
+      const family = state.families.find((f) => f.id === familyId);
+      if (!family) return;
+      if (!confirm(`Clear all finds for "${family.name}"?`)) return;
+      try {
+        const data = await api("/api/admin/reset", { method: "POST", body: { scope: "family", familyId } });
+        applyStateFromResponse(data);
+        toast(`Reset finds for ${family.name}`);
+      } catch (err) { toast(err.message, true); }
+    }
+
+    async function flushOgre() {
+      if (!confirm("Clear all of Grumblestone's saved clues and audio? Next time a family opens a card, he'll come up with new ones.")) return;
+      try {
+        const data = await api("/api/admin/reset", { method: "POST", body: { scope: "ogre" } });
+        applyStateFromResponse(data);
+        toast("Grumblestone cache flushed");
+      } catch (err) { toast(err.message, true); }
+    }
+
+    async function resetAll() {
+      if (!confirm("⚠️ Remove ALL families and finds? Locations will be kept. This cannot be undone.")) return;
+      const confirmText = prompt('Type "RESET" to confirm.');
+      if (confirmText !== "RESET") {
+        toast("Cancelled", false);
+        return;
+      }
+      try {
+        const data = await api("/api/admin/reset", { method: "POST", body: { scope: "all" } });
+        applyStateFromResponse(data);
+        toast("Everything reset");
+      } catch (err) { toast(err.message, true); }
+    }
+
+    async function toggleFind(familyId, locationId, found) {
+      try {
+        const data = await api("/api/admin/state", { method: "POST", body: { familyId, locationId, found } });
+        applyStateFromResponse(data);
+      } catch (err) { toast(err.message, true); }
+    }
+
+    async function seedLocations() {
+      if (state.locations.length > 0) {
+        if (!confirm("Locations already seeded. The seed endpoint skips if non-empty, so this is a no-op — continue?")) return;
+      }
+      try {
+        const data = await api("/api/seed", { method: "POST" });
+        applyStateFromResponse(data);
+        toast(data.message || "Seeded");
+      } catch (err) { toast(err.message, true); }
+    }
+
+    // -------- Init / key gate --------
+    async function unlock(keyValue) {
+      adminKey = keyValue;
+      try {
+        await loadState();
+        hide($("keyGate"));
+        show($("adminContent"));
+        const badge = $("keyBadge");
+        badge.textContent = "🔑 unlocked";
+        show(badge);
+        // Reflect key in URL so refresh stays unlocked, without logging it anywhere
+        const url = new URL(location.href);
+        url.searchParams.set("key", keyValue);
+        history.replaceState({}, "", url.toString());
+      } catch (err) {
+        show($("keyGate"));
+        hide($("adminContent"));
+        $("keyGateMsg").textContent = err.message;
+      }
+    }
+
+    $("keySubmitBtn").addEventListener("click", () => {
+      const v = $("keyInput").value.trim();
+      if (v) unlock(v);
+    });
+    $("keyInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("keySubmitBtn").click();
+    });
+
+    $("addFamilyBtn").addEventListener("click", addFamily);
+    $("newFamilyInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addFamily();
+    });
+    $("resetAllBtn").addEventListener("click", resetAll);
+    $("flushOgreBtn").addEventListener("click", flushOgre);
+    $("seedBtn").addEventListener("click", seedLocations);
+
+    if (adminKey) {
+      unlock(adminKey);
+    } else {
+      show($("keyGate"));
+    }
+  </script>
+</body>
+</html>
