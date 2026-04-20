@@ -105,7 +105,7 @@
     .stamp-btn:hover { transform: translateY(-1px) rotate(-0.5deg); }
     .stamp-btn:active { transform: translateY(1px); box-shadow: 0 0 0 #6b1f18, inset 0 0 12px rgba(0,0,0,0.3); }
 
-    /* Secondary ink button (Ask Grumblestone, refresh, etc.) */
+    /* Secondary ink button (consult persona, refresh, etc.) */
     .ink-btn {
       font-family: "IM Fell English SC", serif;
       letter-spacing: 0.1em;
@@ -189,10 +189,10 @@
   <header class="sticky top-0 z-10 map-header backdrop-blur">
     <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
       <div>
-        <h1 class="display-font text-2xl">🗺️ Mohawk Trail Hunt</h1>
+        <h1 id="scenarioTitle" class="display-font text-2xl"></h1>
         <p id="familyLabel" class="smallcaps text-[11px] text-amber-100/80"></p>
       </div>
-      <button id="switchFamilyBtn" class="smallcaps text-[11px] text-amber-200 hover:text-amber-100 underline hidden">Switch crew</button>
+      <button id="switchFamilyBtn" class="smallcaps text-[11px] text-amber-200 hover:text-amber-100 underline hidden"></button>
     </div>
   </header>
 
@@ -201,25 +201,19 @@
     <!-- Family picker (shown when no family selected) -->
     <section id="familyPicker" class="hidden">
       <div class="card p-6">
-        <h2 class="display-font text-3xl mb-2">Welcome, treasure hunter!</h2>
-        <p class="smallcaps text-sm mb-4" style="color: var(--ink-soft);">Which crew do ye sail with?</p>
-        <select id="familySelect" class="w-full rounded px-3 py-3 bg-[#fdf4d8] border border-[color:var(--sepia)] text-[color:var(--ink)] text-base mb-3" style="font-family: inherit;">
-          <option value="">— Pick your crew —</option>
-        </select>
-        <button id="confirmFamilyBtn" class="stamp-btn w-full disabled:opacity-40">
-          Begin the Hunt
-        </button>
-        <p id="noFamiliesMsg" class="text-xs mt-3 hidden italic" style="color: var(--ink-soft);">
-          No crews charted yet — ask whoever set this up to add yours.
-        </p>
+        <h2 id="welcomeTitle" class="display-font text-3xl mb-2"></h2>
+        <p id="crewPrompt" class="smallcaps text-sm mb-4" style="color: var(--ink-soft);"></p>
+        <select id="familySelect" class="w-full rounded px-3 py-3 bg-[#fdf4d8] border border-[color:var(--sepia)] text-[color:var(--ink)] text-base mb-3" style="font-family: inherit;"></select>
+        <button id="confirmFamilyBtn" class="stamp-btn w-full disabled:opacity-40"></button>
+        <p id="noFamiliesMsg" class="text-xs mt-3 hidden italic" style="color: var(--ink-soft);"></p>
       </div>
     </section>
 
     <!-- Locations -->
     <section id="locationsSection" class="hidden">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="display-font text-3xl">The Eight Treasures</h2>
-        <button id="refreshBtn" class="smallcaps text-xs hover:text-[color:var(--oxblood)]" style="color: var(--ink-soft);">✦ Redraw the map</button>
+        <h2 id="treasuresHeading" class="display-font text-3xl"></h2>
+        <button id="refreshBtn" class="smallcaps text-xs hover:text-[color:var(--oxblood)]" style="color: var(--ink-soft);"></button>
       </div>
       <div id="locationGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-5"></div>
     </section>
@@ -228,12 +222,12 @@
 
     <!-- Leaderboard -->
     <section id="leaderboardSection" class="hidden">
-      <h2 class="display-font text-3xl mb-4">⚔ The Roster of Bounty</h2>
+      <h2 id="leaderboardHeading" class="display-font text-3xl mb-4"></h2>
       <div id="leaderboard" class="space-y-2"></div>
     </section>
 
     <!-- Loading -->
-    <div id="loading" class="text-center italic py-12" style="color: var(--ink-soft);">Unrolling the map...</div>
+    <div id="loading" class="text-center italic py-12" style="color: var(--ink-soft);"></div>
 
     <!-- Error -->
     <div id="error" class="hidden border rounded p-4 text-sm" style="background: rgba(160, 51, 43, 0.15); border-color: var(--oxblood); color: var(--oxblood);"></div>
@@ -243,30 +237,51 @@
   <!-- Find confirmation modal -->
   <div id="modal" class="hidden fixed inset-0 bg-[#3b2a1a]/80 backdrop-blur-sm z-20 flex items-center justify-center p-4">
     <div class="card p-6 max-w-sm w-full fade-in">
-      <h3 class="display-font text-2xl mb-2">Upon yer honor...</h3>
-      <p class="text-sm mb-1" style="color: var(--ink-soft);">Are ye truly standing at:</p>
+      <h3 id="modalTitle" class="display-font text-2xl mb-2"></h3>
+      <p id="modalPrompt" class="text-sm mb-1" style="color: var(--ink-soft);"></p>
       <p id="modalLocationName" class="display-font text-xl mb-4" style="color: var(--oxblood);"></p>
       <div class="flex gap-2">
-        <button id="modalCancelBtn" class="ink-btn flex-1">
-          Not yet
-        </button>
-        <button id="modalConfirmBtn" class="stamp-btn flex-1">
-          Aye, we're here!
-        </button>
+        <button id="modalCancelBtn" class="ink-btn flex-1"></button>
+        <button id="modalConfirmBtn" class="stamp-btn flex-1"></button>
       </div>
     </div>
   </div>
 
   <script>
     // -------- Config --------
-    const REGION_STYLES = {
-      "Western Kingdom":   { emoji: "⛰️" },
-      "River Realm":       { emoji: "🌊" },
-      "Eastern Outposts":  { emoji: "🌲" },
+    // Fallback in case /api/config fails — keeps the app usable with generic copy.
+    const FALLBACK_THEME = {
+      persona: {
+        name: "Guide", icon: "🧭",
+        welcomeVerb: "welcomes you", grumbleVerb: "speaks",
+        loadingFiller: "...", unavailableLabel: "The guide is unavailable.",
+        consultLabel: "Ask the guide",
+      },
+      scenario: {
+        title: "Scavenger Hunt",
+        itemNounPlural: "treasures",
+        crewNoun: "crew",
+        regions: { default: { emoji: "📍" } },
+      },
+      copy: {
+        switchCrew: "Switch crew",
+        welcomeTitle: "Welcome!", crewPrompt: "Which crew are you with?",
+        crewPickerPlaceholder: "— Pick —", startHuntBtn: "Start", noCrewsHint: "No crews yet.",
+        treasuresHeading: "The {count} Treasures", refreshBtn: "Refresh",
+        leaderboardHeading: "Leaderboard", leaderboardEmpty: "No crews yet.",
+        youSuffix: " (you)", lastClaimLabel: "Last find {time}", noBountyLabel: "No finds yet",
+        bountyTotalSuffix: "of {total}",
+        loading: "Loading...",
+        modalTitle: "Confirm", modalPrompt: "Are you at:",
+        modalCancel: "Not yet", modalConfirm: "Yes",
+        foundBtn: "We found it!", foundStampText: "FOUND",
+        claimedLabel: "Found {time}", claimedByOthersLabel: "Also found by: {names}",
+      },
     };
 
     // -------- State --------
     let state = null;
+    let theme = FALLBACK_THEME;
     let familyId = localStorage.getItem("familyId") || null;
     let pendingLocationId = null;
     const loadingOgre = new Set(); // keys: `${locationId}|${mode}`
@@ -283,6 +298,11 @@
       }[c]));
     }
 
+    // Simple {placeholder} substitution for copy templates.
+    function tmpl(str, vars = {}) {
+      return String(str).replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? `{${k}}`));
+    }
+
     function formatTime(iso) {
       const d = new Date(iso);
       const now = new Date();
@@ -293,6 +313,12 @@
     }
 
     // -------- API --------
+    async function fetchTheme() {
+      const res = await fetch("/api/config", { cache: "no-store" });
+      if (!res.ok) throw new Error("Failed to load theme config");
+      return res.json();
+    }
+
     async function fetchState() {
       const res = await fetch("/api/state", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load state");
@@ -323,6 +349,27 @@
       return data.text;
     }
 
+    // -------- Static copy population --------
+    // Writes strings from `theme` into the static parts of the DOM.
+    // Dynamic sections (cards, leaderboard) read from `theme` at render time.
+    function applyTheme() {
+      const { scenario, copy } = theme;
+      document.title = scenario.title.replace(/^[^\w]*\s*/, "") + " — Scavenger Hunt";
+      $("scenarioTitle").textContent = scenario.title;
+      $("switchFamilyBtn").textContent = copy.switchCrew;
+      $("welcomeTitle").textContent = copy.welcomeTitle;
+      $("crewPrompt").textContent = copy.crewPrompt;
+      $("confirmFamilyBtn").textContent = copy.startHuntBtn;
+      $("noFamiliesMsg").textContent = copy.noCrewsHint;
+      $("refreshBtn").textContent = copy.refreshBtn;
+      $("leaderboardHeading").textContent = copy.leaderboardHeading;
+      $("loading").textContent = copy.loading;
+      $("modalTitle").textContent = copy.modalTitle;
+      $("modalPrompt").textContent = copy.modalPrompt;
+      $("modalCancelBtn").textContent = copy.modalCancel;
+      $("modalConfirmBtn").textContent = copy.modalConfirm;
+    }
+
     // -------- Render --------
     function render() {
       if (!state) return;
@@ -348,6 +395,9 @@
       show($("leaderboardSection"));
       show($("switchFamilyBtn"));
       $("familyLabel").textContent = `Playing as ${family.name}`;
+      $("treasuresHeading").textContent = tmpl(theme.copy.treasuresHeading, {
+        count: state.locations.length,
+      });
 
       renderLocations(family);
       renderLeaderboard();
@@ -358,7 +408,7 @@
       const confirmBtn = $("confirmFamilyBtn");
       const noFamiliesMsg = $("noFamiliesMsg");
 
-      select.innerHTML = '<option value="">— Pick your family —</option>' +
+      select.innerHTML = `<option value="">${escapeHtml(theme.copy.crewPickerPlaceholder)}</option>` +
         state.families
           .map((f) => `<option value="${escapeHtml(f.id)}">${escapeHtml(f.name)}</option>`)
           .join("");
@@ -390,8 +440,11 @@
         findsByLocation.get(find.locationId).push(find.familyId);
       }
 
+      const regions = theme.scenario.regions || {};
+      const defaultRegion = regions.default || { emoji: "📍" };
+
       grid.innerHTML = state.locations.map((loc, idx) => {
-        const style = REGION_STYLES[loc.region] || { emoji: "📍" };
+        const style = regions[loc.region] || defaultRegion;
         const myFoundAt = myFinds.get(loc.id);
         const otherFinders = (findsByLocation.get(loc.id) || [])
           .filter((fid) => fid !== family.id)
@@ -405,15 +458,18 @@
         const ogreLoading = loadingOgre.has(ogreKey);
         const ogreError = ogreErrors.get(ogreKey);
 
+        const personaVerb = mode === "success" ? theme.persona.welcomeVerb : theme.persona.grumbleVerb;
+        const personaHeader = `${theme.persona.icon} ${theme.persona.name} ${personaVerb}${ogreLoading ? "..." : ""}`;
+
         const ogrePanel = (ogreText || ogreLoading || ogreError) ? `
           <div class="scroll-panel">
             <p class="smallcaps text-[11px] mb-2" style="color: var(--oxblood);">
-              🧌 Grumblestone ${mode === "success" ? "welcomes ye" : "grumbles"}${ogreLoading ? "..." : ""}
+              ${escapeHtml(personaHeader)}
             </p>
             ${ogreLoading
-              ? `<p class="text-sm italic animate-pulse" style="color: var(--ink-soft);">*grumble grumble*</p>`
+              ? `<p class="text-sm italic animate-pulse" style="color: var(--ink-soft);">${escapeHtml(theme.persona.loadingFiller)}</p>`
               : ogreError
-                ? `<p class="text-sm italic" style="color: var(--oxblood);">The ogre slumbers. (${escapeHtml(ogreError)})</p>`
+                ? `<p class="text-sm italic" style="color: var(--oxblood);">${escapeHtml(theme.persona.unavailableLabel)} (${escapeHtml(ogreError)})</p>`
                 : `
                   <p class="text-[15px] italic leading-relaxed" style="color: var(--ink);">${escapeHtml(ogreText)}</p>
                   <audio controls preload="none" class="w-full mt-3 h-9" src="/api/tts?locationId=${encodeURIComponent(loc.id)}&mode=${encodeURIComponent(mode)}&v=${state.audioVersion || 0}">
@@ -427,23 +483,26 @@
         if (myFoundAt) {
           footer = `
             <div class="mt-3 smallcaps text-sm" style="color: #3d6b3d;">
-              ✦ Claimed ${escapeHtml(formatTime(myFoundAt))}
+              ${escapeHtml(tmpl(theme.copy.claimedLabel, { time: formatTime(myFoundAt) }))}
             </div>
             ${ogrePanel}
           `;
         } else {
           const ogreBtn = (ogreText || ogreLoading) ? "" : `
             <button data-ogre="${escapeHtml(loc.id)}" class="ogreBtn ink-btn mt-2 w-full text-sm">
-              🗣️ Consult Grumblestone
+              ${escapeHtml(theme.persona.consultLabel)}
             </button>
           `;
+          const othersLine = otherFinders.length > 0
+            ? `<p class="mt-2 text-xs italic" style="color: var(--ink-soft);">${escapeHtml(tmpl(theme.copy.claimedByOthersLabel, { names: otherFinders.join(", ") }))}</p>`
+            : "";
           footer = `
             <button data-find="${escapeHtml(loc.id)}" class="findBtn stamp-btn mt-3 w-full">
-              X marks the spot!
+              ${escapeHtml(theme.copy.foundBtn)}
             </button>
             ${ogreBtn}
             ${ogrePanel}
-            ${otherFinders.length > 0 ? `<p class="mt-2 text-xs italic" style="color: var(--ink-soft);">Already claimed by: ${escapeHtml(otherFinders.join(", "))}</p>` : ""}
+            ${othersLine}
           `;
         }
 
@@ -451,7 +510,7 @@
 
         return `
           <div class="card ${tiltClass} p-5 fade-in">
-            ${myFoundAt ? `<div class="found-stamp">FOUND</div>` : ""}
+            ${myFoundAt ? `<div class="found-stamp">${escapeHtml(theme.copy.foundStampText)}</div>` : ""}
             <div class="flex items-start justify-between gap-2 mb-2">
               <div>
                 <div class="smallcaps text-[10px] mb-1" style="color: var(--sepia);">№ ${idx + 1}</div>
@@ -496,25 +555,29 @@
 
       const board = $("leaderboard");
       if (rows.length === 0) {
-        board.innerHTML = `<p class="text-sm italic" style="color: var(--ink-soft);">No crews yet.</p>`;
+        board.innerHTML = `<p class="text-sm italic" style="color: var(--ink-soft);">${escapeHtml(theme.copy.leaderboardEmpty)}</p>`;
         return;
       }
 
       const medals = ["🥇", "🥈", "🥉"];
       board.innerHTML = rows.map((r, i) => {
         const isMe = r.family.id === familyId;
+        const subline = r.lastFind
+          ? tmpl(theme.copy.lastClaimLabel, { time: formatTime(r.lastFind) })
+          : theme.copy.noBountyLabel;
+        const totalSuffix = tmpl(theme.copy.bountyTotalSuffix, { total: state.locations.length });
         return `
           <div class="board-row ${isMe ? "is-me" : ""} flex items-center justify-between px-4 py-3">
             <div class="flex items-center gap-3">
               <span class="text-xl w-7 text-center">${medals[i] || i + 1}</span>
               <div>
-                <p class="display-font text-xl" style="color: ${isMe ? "var(--oxblood)" : "var(--ink)"};">${escapeHtml(r.family.name)}${isMe ? " (ye)" : ""}</p>
-                ${r.lastFind ? `<p class="text-xs italic" style="color: var(--ink-soft);">Last claim ${escapeHtml(formatTime(r.lastFind))}</p>` : `<p class="text-xs italic" style="color: var(--ink-soft);">No bounty yet</p>`}
+                <p class="display-font text-xl" style="color: ${isMe ? "var(--oxblood)" : "var(--ink)"};">${escapeHtml(r.family.name)}${isMe ? escapeHtml(theme.copy.youSuffix) : ""}</p>
+                <p class="text-xs italic" style="color: var(--ink-soft);">${escapeHtml(subline)}</p>
               </div>
             </div>
             <div class="text-right">
               <p class="display-font text-3xl" style="color: var(--ink);">${r.count}</p>
-              <p class="smallcaps text-[10px]" style="color: var(--ink-soft);">of ${state.locations.length}</p>
+              <p class="smallcaps text-[10px]" style="color: var(--ink-soft);">${escapeHtml(totalSuffix)}</p>
             </div>
           </div>
         `;
@@ -595,6 +658,15 @@
     }
 
     // -------- Init / events --------
+    async function loadTheme() {
+      try {
+        theme = await fetchTheme();
+      } catch (err) {
+        console.warn("Falling back to default theme:", err.message);
+      }
+      applyTheme();
+    }
+
     async function loadState() {
       try {
         hide($("error"));
@@ -641,7 +713,10 @@
       });
     }
 
-    loadState();
+    (async () => {
+      await loadTheme();
+      await loadState();
+    })();
   </script>
 </body>
 </html>
