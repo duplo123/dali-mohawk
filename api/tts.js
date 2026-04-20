@@ -1,6 +1,5 @@
 import { kv } from "@vercel/kv";
-
-const DEFAULT_STATE = { families: [], locations: [], finds: [], ogreCache: {} };
+import { getState } from "../lib/state.js";
 
 function stripNonSpoken(text) {
   return text
@@ -58,10 +57,10 @@ export default async function handler(req, res) {
   let base64 = bypassCache ? null : await kv.get(audioKey);
 
   if (!base64) {
-    const state = (await kv.get("hunt:state")) || DEFAULT_STATE;
-    const text = state.ogreCache?.[locationId]?.[mode];
+    const state = await getState();
+    const text = state.guideCache?.[locationId]?.[mode];
     if (!text) {
-      return res.status(400).json({ error: "No ogre text yet — generate the clue first" });
+      return res.status(400).json({ error: "No guide text yet — generate the clue first" });
     }
 
     try {

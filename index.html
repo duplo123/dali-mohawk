@@ -9,9 +9,10 @@
   <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔️</text></svg>" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Pirata+One&display=swap" rel="stylesheet" />
+  <!-- Font stylesheet is injected by applyTheme() from config.style.fontStylesheetUrl. -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* Defaults — mirror config/theme.js `style`. Overridden at runtime by applyTheme(). */
     :root {
       --ink: #3b2a1a;
       --ink-soft: #5a4328;
@@ -20,10 +21,13 @@
       --parchment-1: #f4e4bc;
       --parchment-2: #e8d093;
       --parchment-edge: #8a6a3a;
+      --font-display: "Pirata One", "IM Fell English SC", "Luminari", serif;
+      --font-body: "IM Fell English", "Iowan Old Style", Georgia, serif;
+      --font-smallcaps: "IM Fell English SC", "IM Fell English", Georgia, serif;
     }
 
     body {
-      font-family: "IM Fell English", "Iowan Old Style", Georgia, serif;
+      font-family: var(--font-body);
       color: var(--ink);
       /* Aged parchment: warm gradient + darkened vignette at edges + paper noise */
       background-color: var(--parchment-1);
@@ -51,12 +55,12 @@
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
     .display-font {
-      font-family: "Pirata One", "IM Fell English SC", "Luminari", serif;
+      font-family: var(--font-display);
       letter-spacing: 0.02em;
     }
 
     .smallcaps {
-      font-family: "IM Fell English SC", "IM Fell English", Georgia, serif;
+      font-family: var(--font-smallcaps);
       letter-spacing: 0.08em;
     }
 
@@ -78,7 +82,7 @@
 
     /* Region badge: hand-inked stamp look */
     .region-badge {
-      font-family: "IM Fell English SC", serif;
+      font-family: var(--font-smallcaps);
       letter-spacing: 0.12em;
       text-transform: uppercase;
       font-size: 10px;
@@ -91,7 +95,7 @@
 
     /* "We found it!" stamp button */
     .stamp-btn {
-      font-family: "Pirata One", serif;
+      font-family: var(--font-display);
       letter-spacing: 0.15em;
       text-transform: uppercase;
       background: var(--oxblood);
@@ -107,7 +111,7 @@
 
     /* Secondary ink button (consult persona, refresh, etc.) */
     .ink-btn {
-      font-family: "IM Fell English SC", serif;
+      font-family: var(--font-smallcaps);
       letter-spacing: 0.1em;
       text-transform: uppercase;
       background: rgba(139, 90, 43, 0.12);
@@ -140,7 +144,7 @@
       top: 8px;
       right: 8px;
       transform: rotate(-12deg);
-      font-family: "Pirata One", serif;
+      font-family: var(--font-display);
       font-size: 22px;
       letter-spacing: 0.15em;
       color: var(--oxblood);
@@ -303,6 +307,29 @@
       return String(str).replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? `{${k}}`));
     }
 
+    // Apply theme.style: inject font stylesheet and set CSS custom
+    // properties on :root. Safe to call multiple times.
+    function applyStyle() {
+      const style = theme.style;
+      if (!style) return;
+
+      if (style.fontStylesheetUrl && !document.getElementById("themeFontStylesheet")) {
+        const link = document.createElement("link");
+        link.id = "themeFontStylesheet";
+        link.rel = "stylesheet";
+        link.href = style.fontStylesheetUrl;
+        document.head.appendChild(link);
+      }
+
+      const root = document.documentElement;
+      for (const [key, value] of Object.entries(style.palette || {})) {
+        root.style.setProperty(`--${key}`, value);
+      }
+      for (const [key, value] of Object.entries(style.fonts || {})) {
+        root.style.setProperty(`--font-${key}`, value);
+      }
+    }
+
     function formatTime(iso) {
       const d = new Date(iso);
       const now = new Date();
@@ -353,6 +380,7 @@
     // Writes strings from `theme` into the static parts of the DOM.
     // Dynamic sections (cards, leaderboard) read from `theme` at render time.
     function applyTheme() {
+      applyStyle();
       const { scenario, copy } = theme;
       document.title = scenario.title.replace(/^[^\w]*\s*/, "") + " — Scavenger Hunt";
       $("scenarioTitle").textContent = scenario.title;
@@ -451,7 +479,7 @@
           .map((fid) => state.families.find((f) => f.id === fid)?.name)
           .filter(Boolean);
 
-        const cache = state.ogreCache?.[loc.id] || {};
+        const cache = state.guideCache?.[loc.id] || {};
         const mode = myFoundAt ? "success" : "clue";
         const ogreText = cache[mode];
         const ogreKey = `${loc.id}|${mode}`;
@@ -590,7 +618,7 @@
       if (loadingOgre.has(key)) return;
 
       // Already cached? Just ensure it's reflected in state and re-render.
-      if (state.ogreCache?.[locationId]?.[mode]) {
+      if (state.guideCache?.[locationId]?.[mode]) {
         render();
         return;
       }
@@ -601,9 +629,9 @@
 
       try {
         const text = await fetchOgre(locationId, mode);
-        state.ogreCache = state.ogreCache || {};
-        state.ogreCache[locationId] = state.ogreCache[locationId] || {};
-        state.ogreCache[locationId][mode] = text;
+        state.guideCache = state.guideCache || {};
+        state.guideCache[locationId] = state.guideCache[locationId] || {};
+        state.guideCache[locationId][mode] = text;
       } catch (err) {
         ogreErrors.set(key, err.message);
       } finally {

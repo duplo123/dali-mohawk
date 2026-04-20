@@ -1,6 +1,4 @@
-import { kv } from "@vercel/kv";
-
-const DEFAULT_STATE = { families: [], locations: [], finds: [], ogreCache: {} };
+import { getState, setState } from "../lib/state.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -12,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "familyId and locationId required" });
   }
 
-  const state = (await kv.get("hunt:state")) || DEFAULT_STATE;
+  const state = await getState();
 
   const familyExists = state.families.some((f) => f.id === familyId);
   if (!familyExists) {
@@ -37,6 +35,6 @@ export default async function handler(req, res) {
     foundAt: new Date().toISOString(),
   });
 
-  await kv.set("hunt:state", state);
+  await setState(state);
   return res.status(200).json({ message: "Find recorded", state });
 }

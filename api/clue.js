@@ -1,7 +1,5 @@
-import { kv } from "@vercel/kv";
 import { theme } from "../config/theme.js";
-
-const DEFAULT_STATE = { families: [], locations: [], finds: [], ogreCache: {} };
+import { getState, setState } from "../lib/state.js";
 
 function buildUserPrompt(location, mode) {
   const instructions = theme.persona.promptInstructions[mode] || [];
@@ -54,13 +52,13 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "locationId and mode ('clue' or 'success') required" });
   }
 
-  const state = (await kv.get("hunt:state")) || DEFAULT_STATE;
+  const state = await getState();
   const location = state.locations.find((l) => l.id === locationId);
   if (!location) {
     return res.status(404).json({ error: "Location not found" });
   }
 
-  const cached = state.ogreCache?.[locationId]?.[mode];
+  const cached = state.guideCache?.[locationId]?.[mode];
   if (cached) {
     return res.status(200).json({ text: cached, cached: true });
   }
@@ -68,10 +66,9 @@ export default async function handler(req, res) {
   try {
     const text = await callClaude(theme.persona.systemPrompt, buildUserPrompt(location, mode));
 
-    state.ogreCache = state.ogreCache || {};
-    state.ogreCache[locationId] = state.ogreCache[locationId] || {};
-    state.ogreCache[locationId][mode] = text;
-    await kv.set("hunt:state", state);
+    state.guideCache[locationId] = state.guideCache[locationId] || {};
+    state.guideCache[locationId][mode] = text;
+    await setState(state);
 
     return res.status(200).json({ text, cached: false });
   } catch (err) {

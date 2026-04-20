@@ -1,6 +1,4 @@
-import { kv } from "@vercel/kv";
-
-const DEFAULT_STATE = { families: [], locations: [], finds: [], ogreCache: {} };
+import { getState, setState } from "../../lib/state.js";
 
 function checkAdmin(req) {
   const key = req.query?.key || req.headers?.authorization?.replace("Bearer ", "");
@@ -21,7 +19,7 @@ export default async function handler(req, res) {
   }
 
   const { action, name, familyId } = req.body || {};
-  const state = (await kv.get("hunt:state")) || DEFAULT_STATE;
+  const state = await getState();
 
   if (action === "add") {
     if (!name || !name.trim()) {
@@ -33,7 +31,7 @@ export default async function handler(req, res) {
       createdAt: new Date().toISOString(),
     };
     state.families.push(newFamily);
-    await kv.set("hunt:state", state);
+    await setState(state);
     return res.status(200).json({ message: "Family added", family: newFamily, state });
   }
 
@@ -43,7 +41,7 @@ export default async function handler(req, res) {
     }
     state.families = state.families.filter((f) => f.id !== familyId);
     state.finds = state.finds.filter((f) => f.familyId !== familyId);
-    await kv.set("hunt:state", state);
+    await setState(state);
     return res.status(200).json({ message: "Family removed", state });
   }
 

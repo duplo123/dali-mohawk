@@ -26,9 +26,21 @@ The hunt is driven by one source of truth: **[`config/theme.js`](./config/theme.
              └──────────┘
 ```
 
-### The three config sections
+### The config sections
 
-#### 1. `persona` — the AI guide
+#### 1. `items` — the hunt targets
+
+The list of things players hunt for. Each item: `{ id, name, realName, region, baseClue }`.
+
+- `id` — stable identifier, never change after seeding (finds reference it)
+- `name` — themed display name ("The Marble Kingdom")
+- `realName` — real-world name shown as subtitle ("Natural Bridge"). Repurpose for non-geographic hunts (species name, object name, etc.)
+- `region` — category label; must match a key in `scenario.regions`
+- `baseClue` — static italicized clue shown on the card alongside the AI guide's output
+
+Items are seeded into KV state via `POST /api/seed`. Edits here apply after a fresh seed — use admin's "reset all" then re-seed to re-initialize.
+
+#### 2. `persona` — the AI guide
 
 Defines *who* talks to players. Includes:
 
@@ -46,7 +58,7 @@ Defines *who* talks to players. Includes:
 
 `systemPrompt` and `promptInstructions` never reach the browser — `api/config` strips them via `clientTheme()` in `config/theme.js`.
 
-#### 2. `scenario` — high-level branding
+#### 3. `scenario` — high-level branding
 
 | Key | What it controls |
 |---|---|
@@ -55,7 +67,15 @@ Defines *who* talks to players. Includes:
 | `crewNoun` / `crewNounPlural` | Nouns for player groups ("crew", "crews") |
 | `regions` | Map of region name → `{ emoji }` for location badges. Must include a `default` entry for fallback. |
 
-#### 3. `copy` — every themed UI string
+#### 4. `style` — colors and fonts
+
+- `fontStylesheetUrl` — Google Fonts (or other) stylesheet URL, injected on boot. Set to `null` to rely on system fonts only.
+- `palette` — object of color tokens. Each `key: "#hex"` becomes `--key: #hex` as a CSS custom property on `:root`. Reference via `var(--ink)`, `var(--oxblood)`, etc. in CSS.
+- `fonts` — object of font-family stacks. Each `key: "..."` becomes `--font-key`. Reference via `var(--font-display)`, `var(--font-body)`, `var(--font-smallcaps)`.
+
+Defaults are also mirrored in `index.html`'s `<style>` block so the page renders without FOUC before `/api/config` resolves. When config loads, values are overridden on `:root` at runtime.
+
+#### 5. `copy` — every themed UI string
 
 Every user-facing string (buttons, headings, placeholders, empty states, modal copy) lives here. Placeholders use `{name}` syntax and are substituted at render time — e.g. `"The {count} Treasures"`, `"Already claimed by: {names}"`.
 
@@ -104,24 +124,29 @@ copy: {
 | File | Role |
 |---|---|
 | `config/theme.js` | Config source of truth. Exports `theme` (full, server-side) and `clientTheme()` (client-safe projection) |
+| `lib/state.js` | Centralized KV state access. Exports `getState()` / `setState()`; handles lazy migration of legacy fields |
 | `api/config.js` | Serves the client-safe theme subset to the browser |
+| `api/seed.js` | Seeds `theme.items` into KV state (first run / post-reset) |
 | `api/clue.js` | Reads `theme.persona.systemPrompt` + `promptInstructions` to build LLM prompts |
 | `api/tts.js` | Text-to-speech; persona-agnostic |
-| `api/state.js`, `api/find.js`, `api/seed.js` | Hunt state (locations, families, finds) — stored in Vercel KV |
-| `index.html` | Fetches `/api/config` on boot, populates static copy via `applyTheme()`, dynamic renderers read from `theme` |
+| `api/state.js`, `api/find.js`, `api/admin/*.js` | Hunt state endpoints (all use `lib/state.js`) |
+| `index.html` | Fetches `/api/config` on boot, applies style/copy via `applyTheme()`, dynamic renderers read from `theme` |
 | `admin.html` | Admin panel for managing families and state |
 
 **Fallback**: if `/api/config` fails, `index.html` falls back to a generic default theme so the app stays usable.
 
 ---
 
-## Not yet configurable
+## Retheming a live hunt
 
-These are the next layers of the "creator-customizable" vision:
+**Changing copy, persona, style, or regions only** — no data migration needed. Edit `config/theme.js` and redeploy. Changes take effect on the next page load (client caches `/api/config` for 60s).
 
-1. **Items / locations.** Currently seeded via `api/seed.js` and stored in KV. Next step: define the hunt set in config and have seed read from it.
-2. **Styles.** Colors (`--ink`, `--sepia`, `--oxblood`) and fonts are hardcoded in `index.html`'s `<style>`. A `theme.style` block could emit these as inline CSS variables for per-scenario palettes.
-3. **Internal state key `ogreCache`.** Legacy name in KV state — harmless but worth renaming to `guideCache` during a small migration.
+**Changing items** — items are snapshotted into KV state at seed time, so edits here require a re-seed. `api/seed.js` no-ops when `state.locations` is non-empty, so the flow is:
+
+1. Clear state via KV or extend admin to expose a "clear locations" scope (not yet built — today `scope: "all"` preserves locations intentionally).
+2. `POST /api/seed` re-reads `theme.items` and writes them into state.
+
+A follow-up is adding a dedicated admin scope to clear locations without touching KV directly.
 
 ---
 

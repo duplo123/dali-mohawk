@@ -1,6 +1,4 @@
-import { kv } from "@vercel/kv";
-
-const DEFAULT_STATE = { families: [], locations: [], finds: [], ogreCache: {} };
+import { getState, setState } from "../../lib/state.js";
 
 function checkAdmin(req) {
   const key = req.query?.key || req.headers?.authorization?.replace("Bearer ", "");
@@ -13,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   if (req.method === "GET") {
-    const state = (await kv.get("hunt:state")) || DEFAULT_STATE;
+    const state = await getState();
     return res.status(200).json(state);
   }
 
@@ -24,7 +22,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "familyId, locationId, and found (bool) required" });
     }
 
-    const state = (await kv.get("hunt:state")) || DEFAULT_STATE;
+    const state = await getState();
 
     if (found) {
       const alreadyFound = state.finds.some(
@@ -43,7 +41,7 @@ export default async function handler(req, res) {
       );
     }
 
-    await kv.set("hunt:state", state);
+    await setState(state);
     return res.status(200).json(state);
   }
 

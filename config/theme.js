@@ -9,6 +9,82 @@
 
 export const theme = {
   // =============================================================
+  // ITEMS — the things players hunt for.
+  // =============================================================
+  // Each item is seeded into KV state via POST /api/seed. Once seeded,
+  // the state holds its own copy of the items — edits here only apply
+  // after a fresh seed (or a scope="all" admin reset followed by seed).
+  //
+  // Fields:
+  //   id       — stable identifier; must be unique and should not change
+  //              after seeding (finds reference it).
+  //   name     — themed display name (e.g. "The Marble Kingdom").
+  //   realName — real-world identifier shown as a subtitle (e.g. "Natural Bridge").
+  //              For non-geographic hunts, repurpose as you like (species name,
+  //              object name, etc.).
+  //   region   — category label; must match a key in scenario.regions.
+  //   baseClue — static italicized clue shown on the card even before the AI
+  //              guide is consulted.
+  items: [
+    {
+      id: "loc_marble",
+      name: "The Marble Kingdom",
+      realName: "Natural Bridge",
+      region: "Western Kingdom",
+      baseClue: "Where pale stone remembers a forgotten quarry...",
+    },
+    {
+      id: "loc_canvas",
+      name: "The Giant's Canvas",
+      realName: "MASS MoCA",
+      region: "Western Kingdom",
+      baseClue: "A giant's gallery, too vast for any frame...",
+    },
+    {
+      id: "loc_bowls",
+      name: "The Giant's Soup Bowls",
+      realName: "Shelburne Falls Glacial Potholes",
+      region: "River Realm",
+      baseClue: "The river stirred its cauldron for ten thousand years...",
+    },
+    {
+      id: "loc_garden",
+      name: "The Floating Garden",
+      realName: "Bridge of Flowers",
+      region: "River Realm",
+      baseClue: "A bridge that forgot it was a bridge, and became a garden...",
+    },
+    {
+      id: "loc_sunrise",
+      name: "Guardian of the Sunrise",
+      realName: "Hail to the Sunrise",
+      region: "River Realm",
+      baseClue: "He has watched the eastern sky since before your grandparents' grandparents...",
+    },
+    {
+      id: "loc_tower",
+      name: "The Medieval Watchtower",
+      realName: "Poet's Seat Tower",
+      region: "Eastern Outposts",
+      baseClue: "Climb the tower where poets once whispered to the valley below...",
+    },
+    {
+      id: "loc_train",
+      name: "The Lost Train",
+      realName: "Energy Park",
+      region: "Eastern Outposts",
+      baseClue: "Iron horses sleep here now, dreaming of the rails they once rode...",
+    },
+    {
+      id: "loc_mill",
+      name: "The Watermill of Words",
+      realName: "Montague Bookmill",
+      region: "Eastern Outposts",
+      baseClue: "A mill that once ground wheat now grinds stories instead...",
+    },
+  ],
+
+  // =============================================================
   // PERSONA — the in-world guide who speaks clues & greetings.
   // =============================================================
   persona: {
@@ -86,6 +162,41 @@ OUTPUT RULES (very important — your output will be read aloud by a text-to-spe
   },
 
   // =============================================================
+  // STYLE — colors, fonts, and other visual tokens.
+  // =============================================================
+  // Applied at runtime by index.html: the `palette` and `fonts` values
+  // become CSS custom properties on :root, so CSS rules like
+  // `color: var(--ink)` or `font-family: var(--font-body)` pick them up.
+  //
+  // Sensible defaults are also hardcoded in index.html's <style> block
+  // (mirror of this config) so the page renders immediately without
+  // waiting on /api/config — no FOUC.
+  style: {
+    // Google Fonts URL (or any stylesheet) loaded dynamically on boot.
+    // Set to null to skip — e.g. if you're only using system fonts.
+    fontStylesheetUrl:
+      "https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Pirata+One&display=swap",
+
+    // Color tokens. Each key `foo: "#hex"` becomes `--foo: #hex` on :root.
+    palette: {
+      "ink": "#3b2a1a",
+      "ink-soft": "#5a4328",
+      "sepia": "#8b5a2b",
+      "oxblood": "#a0332b",
+      "parchment-1": "#f4e4bc",
+      "parchment-2": "#e8d093",
+      "parchment-edge": "#8a6a3a",
+    },
+
+    // Font-family stacks. Each key `foo: "..."` becomes `--font-foo: ...`.
+    fonts: {
+      display: `"Pirata One", "IM Fell English SC", "Luminari", serif`,
+      body: `"IM Fell English", "Iowan Old Style", Georgia, serif`,
+      smallcaps: `"IM Fell English SC", "IM Fell English", Georgia, serif`,
+    },
+  },
+
+  // =============================================================
   // COPY — every themed UI string.
   // =============================================================
   copy: {
@@ -134,12 +245,17 @@ OUTPUT RULES (very important — your output will be read aloud by a text-to-spe
 // =============================================================
 // Client-safe projection — everything the frontend needs, with
 // sensitive LLM prompt fields stripped out.
+//
+// Server-only sections (not exposed): persona.systemPrompt,
+// persona.promptInstructions, items. Items live in KV state after
+// seeding and reach the client via /api/state, not /api/config.
 // =============================================================
 export function clientTheme() {
   const { systemPrompt, promptInstructions, ...safePersona } = theme.persona;
   return {
     persona: safePersona,
     scenario: theme.scenario,
+    style: theme.style,
     copy: theme.copy,
   };
 }
