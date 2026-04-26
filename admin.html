@@ -17,9 +17,10 @@
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <h1 class="text-lg font-bold">🛠️ Hunt Admin</h1>
+        <span id="huntBadge" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300"></span>
         <span id="keyBadge" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 hidden"></span>
       </div>
-      <a href="/" class="text-xs text-slate-400 hover:text-slate-200 underline">← family view</a>
+      <a id="familyViewLink" href="/" class="text-xs text-slate-400 hover:text-slate-200 underline">← family view</a>
     </div>
   </header>
 
@@ -37,6 +38,49 @@
 
     <!-- Admin content -->
     <div id="adminContent" class="hidden space-y-8">
+
+      <!-- Hunts list -->
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-lg font-bold">🎨 Hunts</h2>
+          <button id="refreshHuntsBtn" class="text-xs text-slate-400 hover:text-slate-200">↻ refresh</button>
+        </div>
+        <div id="huntsList" class="space-y-2"></div>
+      </section>
+
+      <!-- Create a hunt -->
+      <section>
+        <details id="builderDetails" class="bg-slate-800/40 border border-slate-700 rounded-lg">
+          <summary class="cursor-pointer px-4 py-3 font-semibold">✨ Create a new hunt with AI</summary>
+          <div class="p-4 space-y-4 border-t border-slate-700">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Slug <span class="text-slate-500">(URL-safe, lowercase, e.g. <code class="text-slate-300">halloween-2026</code>)</span></label>
+              <input id="builderSlug" type="text" placeholder="halloween-2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Creative brief</label>
+              <textarea id="builderPrompt" rows="3" placeholder="Spooky Halloween hunt for 8-year-olds in Salem MA..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"></textarea>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-semibold uppercase text-slate-400">Destinations</label>
+                <button id="addDestBtn" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-2 py-1 rounded">+ Add destination</button>
+              </div>
+              <div id="destsList" class="space-y-2"></div>
+              <p class="text-xs text-slate-500 mt-1">2-20 destinations. Real names get preserved; the AI invents themed names, regions, and clues.</p>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Additional instructions <span class="text-slate-500">(optional)</span></label>
+              <textarea id="builderInstructions" rows="2" placeholder="Keep it lighthearted, no real horror" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm"></textarea>
+            </div>
+            <div class="flex items-center gap-3">
+              <button id="builderSubmitBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg text-sm">Generate hunt</button>
+              <span id="builderStatus" class="text-xs text-slate-400"></span>
+            </div>
+            <div id="builderResult" class="hidden border-t border-slate-700 pt-4"></div>
+          </div>
+        </details>
+      </section>
 
       <!-- Summary / seed -->
       <section id="summarySection" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -163,6 +207,157 @@
       const data = await api("/api/admin/state");
       state = data; // GET /api/admin/state returns state directly
       render();
+    }
+
+    async function loadHunts() {
+      try {
+        const data = await api("/api/admin/hunts");
+        renderHunts(data.hunts || []);
+      } catch (err) {
+        $("huntsList").innerHTML = `<p class="text-sm text-red-400">Failed to load hunts: ${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    function renderHunts(hunts) {
+      const container = $("huntsList");
+      // Always show the default Mohawk hunt as a synthetic row even when no
+      // theme is stored in KV — it's file-backed and always playable.
+      const haveMohawk = hunts.some((h) => h.slug === "mohawk");
+      const rows = [...hunts];
+      if (!haveMohawk) {
+        rows.unshift({ slug: "mohawk", personaName: "Grumblestone", scenarioTitle: "Mohawk Trail Hunt", itemCount: null, familyCount: null, findCount: null, isDefault: true });
+      }
+
+      container.innerHTML = rows.map((h) => {
+        const isCurrent = h.slug === HUNT_SLUG;
+        const isDefault = h.slug === "mohawk";
+        const stats = (h.itemCount === null)
+          ? `<span class="italic">file-backed default</span>`
+          : `${h.itemCount} ${h.itemCount === 1 ? "location" : "locations"} · ${h.familyCount} ${h.familyCount === 1 ? "family" : "families"} · ${h.findCount} finds`;
+        return `
+          <div class="flex items-center justify-between bg-slate-800/60 border ${isCurrent ? "border-indigo-500" : "border-slate-700"} rounded-lg px-4 py-3">
+            <div class="min-w-0">
+              <p class="font-semibold flex items-center gap-2">
+                <code class="text-indigo-300">${escapeHtml(h.slug)}</code>
+                ${isCurrent ? '<span class="text-[10px] uppercase tracking-wider bg-indigo-900/60 text-indigo-200 px-1.5 py-0.5 rounded">current</span>' : ""}
+              </p>
+              <p class="text-xs text-slate-500 truncate">${escapeHtml(h.scenarioTitle || "")}${h.personaName ? ` · guide: ${escapeHtml(h.personaName)}` : ""}</p>
+              <p class="text-xs text-slate-500">${stats}</p>
+            </div>
+            <div class="flex gap-2 shrink-0">
+              ${isCurrent ? "" : `<a href="${huntLink("/admin", h.slug)}" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded">Manage</a>`}
+              <a href="${huntLink("/", h.slug, false)}" target="_blank" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded">Preview</a>
+              ${isDefault ? "" : `<button data-delete-hunt="${escapeHtml(h.slug)}" class="text-xs bg-red-900/60 hover:bg-red-800 text-red-200 px-3 py-1.5 rounded">Delete</button>`}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      container.querySelectorAll("[data-delete-hunt]").forEach((btn) => {
+        btn.addEventListener("click", () => deleteHunt(btn.dataset.deleteHunt));
+      });
+    }
+
+    // Builds a URL for a different hunt while preserving the admin key
+    // (when targeting /admin) so the link lands authenticated.
+    function huntLink(path, slug, includeKey = true) {
+      const url = new URL(path, location.origin);
+      url.searchParams.set("hunt", slug);
+      if (includeKey && adminKey) url.searchParams.set("key", adminKey);
+      return url.pathname + url.search;
+    }
+
+    async function deleteHunt(slug) {
+      if (!confirm(`Permanently delete hunt "${slug}"? This wipes its theme, families, finds, and audio cache. Cannot be undone.`)) return;
+      try {
+        await api(`/api/admin/hunts?slug=${encodeURIComponent(slug)}`, { method: "DELETE" });
+        toast(`Deleted ${slug}`);
+        loadHunts();
+      } catch (err) { toast(err.message, true); }
+    }
+
+    // -------- Hunt builder --------
+    function addDestRow(realName = "") {
+      const list = $("destsList");
+      const row = document.createElement("div");
+      row.className = "flex gap-2";
+      row.innerHTML = `
+        <input type="text" value="${escapeHtml(realName)}" placeholder="Real name (e.g. Salem Witch Museum)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm dest-realname" />
+        <button class="text-xs bg-slate-800 hover:bg-red-900/60 text-slate-400 hover:text-red-200 px-3 py-1 rounded dest-remove">×</button>
+      `;
+      row.querySelector(".dest-remove").addEventListener("click", () => row.remove());
+      list.appendChild(row);
+    }
+
+    function readDests() {
+      return Array.from(document.querySelectorAll(".dest-realname"))
+        .map((i) => i.value.trim())
+        .filter(Boolean)
+        .map((realName) => ({ realName }));
+    }
+
+    async function submitBuilder() {
+      const slug = $("builderSlug").value.trim().toLowerCase();
+      const userPrompt = $("builderPrompt").value.trim();
+      const instructions = $("builderInstructions").value.trim();
+      const destinations = readDests();
+
+      if (!/^[a-z0-9][a-z0-9-]{0,47}$/.test(slug)) {
+        toast("Slug must be lowercase letters/digits/hyphens, max 48 chars", true);
+        return;
+      }
+      if (!userPrompt) { toast("Creative brief required", true); return; }
+      if (destinations.length < 2) { toast("Need at least 2 destinations", true); return; }
+
+      const btn = $("builderSubmitBtn");
+      const status = $("builderStatus");
+      btn.disabled = true;
+      btn.classList.add("opacity-50");
+      status.textContent = "Generating... typically 10-30s";
+
+      try {
+        // Custom fetch — bypass api() so we send the body to the build-hunt
+        // endpoint specifically. Still attach key + hunt query params manually
+        // (build-hunt is hunt-creating; the hunt query param is unused but harmless).
+        const url = `/api/admin/build-hunt?key=${encodeURIComponent(adminKey)}&hunt=${encodeURIComponent(HUNT_SLUG)}`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug, userPrompt, destinations, instructions }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (data.validationErrors) {
+            throw new Error(`Validation failed: ${data.validationErrors.join("; ")}`);
+          }
+          throw new Error(data.error || `Request failed (${res.status})`);
+        }
+
+        showBuilderResult(data);
+        toast(`Created ${data.slug}`);
+        loadHunts();
+      } catch (err) {
+        toast(err.message, true);
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove("opacity-50");
+        status.textContent = "";
+      }
+    }
+
+    function showBuilderResult(data) {
+      const el = $("builderResult");
+      const previewUrl = `${data.previewUrl}`;
+      const adminUrl = adminKey ? `${data.adminUrl}&key=${encodeURIComponent(adminKey)}` : data.adminUrl;
+      el.innerHTML = `
+        <p class="text-sm font-semibold text-emerald-300 mb-2">✓ Hunt "${escapeHtml(data.slug)}" created</p>
+        <p class="text-xs text-slate-400 mb-2">Theme: <span class="text-slate-200">${escapeHtml(data.theme.scenario.title)}</span> · Guide: <span class="text-slate-200">${escapeHtml(data.theme.persona.name)}</span> ${escapeHtml(data.theme.persona.icon)} · ${data.theme.items.length} locations</p>
+        <div class="flex gap-2">
+          <a href="${escapeHtml(previewUrl)}" target="_blank" class="text-xs bg-emerald-700 hover:bg-emerald-800 text-white font-semibold px-3 py-1.5 rounded">Open preview ↗</a>
+          <a href="${escapeHtml(adminUrl)}" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded">Manage this hunt</a>
+        </div>
+      `;
+      show(el);
     }
 
     function applyStateFromResponse(data) {
@@ -351,6 +546,7 @@
       adminKey = keyValue;
       try {
         await loadState();
+        loadHunts();
         hide($("keyGate"));
         show($("adminContent"));
         const badge = $("keyBadge");
@@ -382,6 +578,18 @@
     $("resetAllBtn").addEventListener("click", resetAll);
     $("flushOgreBtn").addEventListener("click", flushOgre);
     $("seedBtn").addEventListener("click", seedLocations);
+
+    // Hunts list + builder wiring
+    $("refreshHuntsBtn").addEventListener("click", loadHunts);
+    $("addDestBtn").addEventListener("click", () => addDestRow());
+    $("builderSubmitBtn").addEventListener("click", submitBuilder);
+
+    // Show current hunt slug in header + make the family-view link slug-aware.
+    $("huntBadge").textContent = `🎯 ${HUNT_SLUG}`;
+    $("familyViewLink").href = `/?hunt=${encodeURIComponent(HUNT_SLUG)}`;
+
+    // Seed three empty destination rows so the builder is ready to go.
+    addDestRow(); addDestRow(); addDestRow();
 
     if (adminKey) {
       unlock(adminKey);
