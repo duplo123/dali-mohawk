@@ -9,5 +9,8 @@
         { "key": "Cache-Control", "value": "no-store" }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/admin/build-hunt.js": { "maxDuration": 60 }
+  }
 }
