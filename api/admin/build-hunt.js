@@ -3,6 +3,7 @@ import { isValidSlug, DEFAULT_HUNT_SLUG, getState, setState } from "../../lib/st
 import { getTheme, setTheme } from "../../lib/theme.js";
 import { FONT_PRESETS, fontPresetKeys } from "../../config/font-presets.js";
 import { VOICE_PRESETS, voicePresetKeys } from "../../config/voice-presets.js";
+import { SKIN_PRESETS, skinPresetKeys } from "../../config/skin-presets.js";
 
 // Palette tokens index.html's CSS reads via var(--ink), var(--parchment-1), etc.
 // The LLM must produce a hex value for each.
@@ -40,8 +41,14 @@ function buildToolSchema() {
       "Submit a complete themed hunt configuration. The system will use this to render the player-facing app and drive the AI guide.",
     input_schema: {
       type: "object",
-      required: ["fontPreset", "voicePreset", "persona", "scenario", "style", "copy", "items"],
+      required: ["fontPreset", "voicePreset", "skinPreset", "persona", "scenario", "style", "copy", "items"],
       properties: {
+        skinPreset: {
+          type: "string",
+          enum: skinPresetKeys(),
+          description:
+            "Which visual shell (background, card style, button style, FOUND stamp, etc.) best fits the theme. Pick exactly one key. The palette you provide will be interpreted through this skin's CSS, so colors must suit the chosen shell.",
+        },
         fontPreset: {
           type: "string",
           enum: fontPresetKeys(),
@@ -113,7 +120,12 @@ function buildToolSchema() {
           properties: {
             palette: {
               type: "object",
-              description: `Hex color tokens. Required keys: ${REQUIRED_PALETTE_TOKENS.join(", ")}. Each value must be a valid CSS hex color.`,
+              description:
+                `Hex color tokens, repurposed semantically per skin. Required keys: ${REQUIRED_PALETTE_TOKENS.join(", ")}. Slot meanings: ` +
+                "parchment-1 = primary surface background; parchment-2 = secondary surface background; " +
+                "ink = primary text; ink-soft = secondary text; sepia = secondary border / muted accent; " +
+                "oxblood = primary accent (claim button, FOUND stamp); parchment-edge = border accent. " +
+                "Each value must be a valid CSS hex color and contrast appropriately for readability against its skin.",
               required: REQUIRED_PALETTE_TOKENS,
               additionalProperties: { type: "string" },
             },
@@ -160,7 +172,8 @@ function buildSystemPrompt() {
     "- Items: one per destination, in the order provided. Preserve realName exactly as given. Invent a themed `name` and a poetic 1-2 sentence `baseClue` for each.",
     "- Regions: invent 2-4 region names that thematically group the destinations, plus a `default` fallback. Every item's `region` MUST exactly match a key in `scenario.regions`.",
     "- Persona systemPrompt: write a complete in-character system prompt for the AI guide. It MUST include OUTPUT RULES forbidding stage directions (no *sighs*, no (weary smile)), emoji, markdown, or asides — text is read aloud by TTS. Cap the guide at 2-3 short sentences, simple words a child can understand.",
-    "- Palette: pick a cohesive hex color scheme. All required tokens must be present and dark-on-light readable.",
+    "- Skin: pick the visual shell whose description best matches the brief. The palette you provide is interpreted by the skin's CSS, so it must fit the shell. For dark/sci-fi/cyberpunk skins, parchment-1 and parchment-2 should be DARK backgrounds (deep slate/navy/black), with ink as a LIGHT text color, and oxblood/parchment-edge as bright neon accents. For parchment skins use the warm cream/sepia/brown family with dark ink.",
+    "- Palette: pick a cohesive hex color scheme. All required tokens must be present and contrast appropriately for readability against the chosen skin's background.",
     "- Copy: rewrite every UI string in-theme. Preserve placeholders like {count}, {name}, {time}, {names}, {total}.",
     "- Pick the fontPreset and voicePreset whose label best fits the brief.",
     "",
@@ -182,6 +195,12 @@ function buildUserPrompt({ userPrompt, destinations, instructions }) {
     if (d.hint) parts.push(`— hint: ${d.hint}`);
     lines.push(parts.join(" "));
   });
+  lines.push("");
+
+  lines.push("SKIN PRESETS available (visual shell — pick the one whose description best matches the brief):");
+  for (const [key, preset] of Object.entries(SKIN_PRESETS)) {
+    lines.push(`- ${key}: ${preset.description || preset.label}`);
+  }
   lines.push("");
 
   lines.push("FONT PRESETS available:");
@@ -243,6 +262,9 @@ function validateThemeInput(input, expectedItemCount) {
   }
   if (!VOICE_PRESETS[input.voicePreset]) {
     errors.push(`Unknown voicePreset "${input.voicePreset}"`);
+  }
+  if (!SKIN_PRESETS[input.skinPreset]) {
+    errors.push(`Unknown skinPreset "${input.skinPreset}"`);
   }
 
   const regionKeys = Object.keys(input.scenario?.regions || {});

@@ -12,7 +12,10 @@
   <!-- Font stylesheet is injected by applyTheme() from config.style.fontStylesheetUrl. -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Defaults — mirror config/theme.js `style`. Overridden at runtime by applyTheme(). */
+    /* Shared base — palette/font CSS variables, layout primitives, utility
+       classes. Skin-specific rules (background, cards, buttons, badges,
+       header, etc.) live in #skinStyle below. Defaults mirror
+       config/theme.js so the page renders without FOUC. */
     :root {
       --ink: #3b2a1a;
       --ink-soft: #5a4328;
@@ -29,7 +32,26 @@
     body {
       font-family: var(--font-body);
       color: var(--ink);
-      /* Aged parchment: warm gradient + darkened vignette at edges + paper noise */
+    }
+
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .display-font { font-family: var(--font-display); letter-spacing: 0.02em; }
+    .smallcaps    { font-family: var(--font-smallcaps); letter-spacing: 0.08em; }
+
+    main, header { position: relative; z-index: 2; }
+  </style>
+
+  <!--
+    Skin CSS — visual shell (background, cards, buttons, badges, FOUND
+    stamp, etc.). Default content mirrors config/skin-presets.js
+    "parchment" so the Mohawk hunt renders without FOUC. At runtime,
+    applyStyle() replaces the contents with theme.style.skinCss for the
+    current hunt.
+  -->
+  <style id="skinStyle">
+    body {
       background-color: var(--parchment-1);
       background-image:
         radial-gradient(ellipse at 20% 10%, rgba(255, 245, 210, 0.9) 0%, rgba(255, 245, 210, 0) 55%),
@@ -39,7 +61,6 @@
         linear-gradient(135deg, var(--parchment-1) 0%, var(--parchment-2) 100%);
     }
 
-    /* Burnt/torn edge vignette overlay */
     body::before {
       content: "";
       position: fixed;
@@ -51,20 +72,6 @@
         inset 0 0 40px rgba(60, 35, 10, 0.35);
     }
 
-    .fade-in { animation: fadeIn 0.3s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-    .display-font {
-      font-family: var(--font-display);
-      letter-spacing: 0.02em;
-    }
-
-    .smallcaps {
-      font-family: var(--font-smallcaps);
-      letter-spacing: 0.08em;
-    }
-
-    /* Parchment card: lighter than base, inked border, soft inner shadow */
     .card {
       background:
         radial-gradient(ellipse at 30% 20%, rgba(255, 250, 225, 0.7), rgba(255, 250, 225, 0) 60%),
@@ -80,7 +87,6 @@
     .card-tilt-left { transform: rotate(-0.6deg); }
     .card-tilt-right { transform: rotate(0.6deg); }
 
-    /* Region badge: hand-inked stamp look */
     .region-badge {
       font-family: var(--font-smallcaps);
       letter-spacing: 0.12em;
@@ -93,7 +99,6 @@
       border-radius: 2px;
     }
 
-    /* "We found it!" stamp button */
     .stamp-btn {
       font-family: var(--font-display);
       letter-spacing: 0.15em;
@@ -109,7 +114,6 @@
     .stamp-btn:hover { transform: translateY(-1px) rotate(-0.5deg); }
     .stamp-btn:active { transform: translateY(1px); box-shadow: 0 0 0 #6b1f18, inset 0 0 12px rgba(0,0,0,0.3); }
 
-    /* Secondary ink button (consult persona, refresh, etc.) */
     .ink-btn {
       font-family: var(--font-smallcaps);
       letter-spacing: 0.1em;
@@ -123,7 +127,6 @@
     }
     .ink-btn:hover { background: rgba(139, 90, 43, 0.25); }
 
-    /* Ogre / clue panel: torn scroll */
     .scroll-panel {
       background: linear-gradient(180deg, #f7e6b8 0%, #ead295 100%);
       border-left: 1px solid var(--sepia);
@@ -138,7 +141,6 @@
       );
     }
 
-    /* Found overlay stamp */
     .found-stamp {
       position: absolute;
       top: 8px;
@@ -154,7 +156,6 @@
       pointer-events: none;
     }
 
-    /* Header: looks like a burnt banner */
     .map-header {
       background:
         linear-gradient(180deg, rgba(59, 42, 26, 0.95) 0%, rgba(80, 55, 30, 0.92) 100%);
@@ -163,7 +164,6 @@
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
     }
 
-    /* Leaderboard row */
     .board-row {
       background: linear-gradient(135deg, #fbeecb 0%, #f0dba0 100%);
       border: 1px solid var(--sepia);
@@ -174,7 +174,6 @@
       box-shadow: 0 0 0 1px var(--oxblood);
     }
 
-    /* Dashed trail between sections */
     .trail-divider {
       height: 24px;
       background-image: radial-gradient(circle, var(--sepia) 1.5px, transparent 2px);
@@ -183,8 +182,6 @@
       background-position: center;
       opacity: 0.6;
     }
-
-    main, header { position: relative; z-index: 2; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -339,6 +336,17 @@
       }
       for (const [key, value] of Object.entries(style.fonts || {})) {
         root.style.setProperty(`--font-${key}`, value);
+      }
+
+      // Swap in the skin CSS for the current hunt. The inline default in
+      // <style id="skinStyle"> mirrors the parchment skin for FOUC; once
+      // /api/config resolves we replace it with whatever skinPreset the
+      // theme was built with.
+      if (style.skinCss) {
+        const skinEl = document.getElementById("skinStyle");
+        if (skinEl && skinEl.textContent !== style.skinCss) {
+          skinEl.textContent = style.skinCss;
+        }
       }
     }
 

@@ -22,43 +22,43 @@ const DEFAULT_VOICE_SETTINGS = {
 export const VOICE_PRESETS = {
   monster: {
     label: "Monster — gruff, weary, ogre-ish (e.g. Grumblestone)",
-    elevenLabsVoiceId: "REPLACE_WITH_ELEVENLABS_VOICE_ID",
+    elevenLabsVoiceId: "rZcizibcb1rTBqSwSjpYR",
     voiceSettings: { ...DEFAULT_VOICE_SETTINGS, stability: 0.45, style: 0.6 },
   },
 
   commander: {
     label: "Commander — authoritative, militaristic, no-nonsense",
-    elevenLabsVoiceId: "REPLACE_WITH_ELEVENLABS_VOICE_ID",
+    elevenLabsVoiceId: "wa4sQVgbDDzUDEzJwch3",
     voiceSettings: { ...DEFAULT_VOICE_SETTINGS, stability: 0.7, style: 0.35 },
   },
 
   pixie: {
     label: "Pixie — whimsical, light, fairy-tale playful",
-    elevenLabsVoiceId: "REPLACE_WITH_ELEVENLABS_VOICE_ID",
+    elevenLabsVoiceId: "z12gfZvqqjJ9oHFbB5i6",
     voiceSettings: { ...DEFAULT_VOICE_SETTINGS, stability: 0.4, style: 0.7 },
   },
 
   narrator: {
     label: "Narrator — warm, theatrical, classic storyteller",
-    elevenLabsVoiceId: "REPLACE_WITH_ELEVENLABS_VOICE_ID",
+    elevenLabsVoiceId: "NuRyEq0OdD9mMOyd51UZ",
     voiceSettings: { ...DEFAULT_VOICE_SETTINGS, stability: 0.6, style: 0.5 },
   },
 
   detective: {
     label: "Detective — gravelly, mid-century noir, cigarette-smoke voiceover",
-    elevenLabsVoiceId: "REPLACE_WITH_ELEVENLABS_VOICE_ID",
+    elevenLabsVoiceId: "SHiZvifpX6NOyojATxRy",
     voiceSettings: { ...DEFAULT_VOICE_SETTINGS, stability: 0.55, style: 0.55 },
   },
 
   pirate: {
     label: "Pirate — salty sea-captain, boisterous and weathered",
-    elevenLabsVoiceId: "REPLACE_WITH_ELEVENLABS_VOICE_ID",
+    elevenLabsVoiceId: "tVkOo4DLgZb89qB0x4qP",
     voiceSettings: { ...DEFAULT_VOICE_SETTINGS, stability: 0.4, style: 0.75 },
   },
 
   sage: {
     label: "Sage — calm, ancient, wise mentor",
-    elevenLabsVoiceId: "REPLACE_WITH_ELEVENLABS_VOICE_ID",
+    elevenLabsVoiceId: "WSXtIaj4eHNY9xr6F1Th",
     voiceSettings: { ...DEFAULT_VOICE_SETTINGS, stability: 0.7, style: 0.4 },
   },
 };
