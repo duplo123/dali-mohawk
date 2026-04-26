@@ -1,4 +1,4 @@
-import { getState, setState } from "../../lib/state.js";
+import { getState, setState, huntSlugFromReq } from "../../lib/state.js";
 
 function checkAdmin(req) {
   const key = req.query?.key || req.headers?.authorization?.replace("Bearer ", "");
@@ -10,8 +10,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
+  const huntSlug = huntSlugFromReq(req);
+  if (!huntSlug) return res.status(400).json({ error: "Invalid hunt slug" });
+
   if (req.method === "GET") {
-    const state = await getState();
+    const state = await getState(huntSlug);
     return res.status(200).json(state);
   }
 
@@ -22,7 +25,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "familyId, locationId, and found (bool) required" });
     }
 
-    const state = await getState();
+    const state = await getState(huntSlug);
 
     if (found) {
       const alreadyFound = state.finds.some(
@@ -41,7 +44,7 @@ export default async function handler(req, res) {
       );
     }
 
-    await setState(state);
+    await setState(state, huntSlug);
     return res.status(200).json(state);
   }
 

@@ -1,8 +1,8 @@
-import { theme } from "../config/theme.js";
-import { getState, setState } from "../lib/state.js";
+import { getState, setState, huntSlugFromReq } from "../lib/state.js";
+import { getTheme } from "../lib/theme.js";
 
-function buildUserPrompt(location, mode) {
-  const instructions = theme.persona.promptInstructions[mode] || [];
+function buildUserPrompt(persona, location, mode) {
+  const instructions = persona.promptInstructions?.[mode] || [];
   const locationLine = `Place: ${location.name} (real name: ${location.realName}, region: ${location.region})`;
   const lines = [...instructions, "", locationLine];
   if (mode === "clue" && location.baseClue) {
@@ -47,12 +47,20 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const huntSlug = huntSlugFromReq(req);
+  if (!huntSlug) return res.status(400).json({ error: "Invalid hunt slug" });
+
   const { locationId, mode } = req.body || {};
   if (!locationId || !["clue", "success"].includes(mode)) {
     return res.status(400).json({ error: "locationId and mode ('clue' or 'success') required" });
   }
 
-  const state = await getState();
+  const theme = await getTheme(huntSlug);
+  if (!theme) {
+    return res.status(404).json({ error: `No theme found for hunt "${huntSlug}"` });
+  }
+
+  const state = await getState(huntSlug);
   const location = state.locations.find((l) => l.id === locationId);
   if (!location) {
     return res.status(404).json({ error: "Location not found" });
@@ -64,11 +72,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const text = await callClaude(theme.persona.systemPrompt, buildUserPrompt(location, mode));
+    const text = await callClaude(theme.persona.systemPrompt, buildUserPrompt(theme.persona, location, mode));
 
     state.guideCache[locationId] = state.guideCache[locationId] || {};
     state.guideCache[locationId][mode] = text;
-    await setState(state);
+    await setState(state, huntSlug);
 
     return res.status(200).json({ text, cached: false });
   } catch (err) {

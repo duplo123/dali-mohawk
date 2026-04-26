@@ -252,6 +252,18 @@
   </div>
 
   <script>
+    // -------- Hunt slug --------
+    // ?hunt=<slug> selects which hunt to load. Defaults to "mohawk".
+    // Slug is appended to every API call so a single static frontend can
+    // serve any number of hunts.
+    const HUNT_SLUG = (new URLSearchParams(location.search).get("hunt") || "mohawk").toLowerCase();
+    function apiUrl(path, params = {}) {
+      const url = new URL(path, location.origin);
+      url.searchParams.set("hunt", HUNT_SLUG);
+      for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+      return url.pathname + url.search;
+    }
+
     // -------- Config --------
     // Fallback in case /api/config fails — keeps the app usable with generic copy.
     const FALLBACK_THEME = {
@@ -341,19 +353,19 @@
 
     // -------- API --------
     async function fetchTheme() {
-      const res = await fetch("/api/config", { cache: "no-store" });
+      const res = await fetch(apiUrl("/api/config"), { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load theme config");
       return res.json();
     }
 
     async function fetchState() {
-      const res = await fetch("/api/state", { cache: "no-store" });
+      const res = await fetch(apiUrl("/api/state"), { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to load state");
       return res.json();
     }
 
     async function postFind(locationId) {
-      const res = await fetch("/api/find", {
+      const res = await fetch(apiUrl("/api/find"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ familyId, locationId }),
@@ -366,7 +378,7 @@
     }
 
     async function fetchOgre(locationId, mode) {
-      const res = await fetch("/api/clue", {
+      const res = await fetch(apiUrl("/api/clue"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locationId, mode }),
@@ -500,7 +512,7 @@
                 ? `<p class="text-sm italic" style="color: var(--oxblood);">${escapeHtml(theme.persona.unavailableLabel)} (${escapeHtml(ogreError)})</p>`
                 : `
                   <p class="text-[15px] italic leading-relaxed" style="color: var(--ink);">${escapeHtml(ogreText)}</p>
-                  <audio controls preload="none" class="w-full mt-3 h-9" src="/api/tts?locationId=${encodeURIComponent(loc.id)}&mode=${encodeURIComponent(mode)}&v=${state.audioVersion || 0}">
+                  <audio controls preload="none" class="w-full mt-3 h-9" src="${apiUrl('/api/tts', { locationId: loc.id, mode, v: state.audioVersion || 0 })}">
                     Your browser does not support audio playback.
                   </audio>
                 `

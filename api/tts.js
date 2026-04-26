@@ -1,5 +1,6 @@
 import { kv } from "@vercel/kv";
-import { getState } from "../lib/state.js";
+import { getState, huntSlugFromReq } from "../lib/state.js";
+import { getVoiceConfig } from "../lib/theme.js";
 
 function stripNonSpoken(text) {
   return text
@@ -10,11 +11,10 @@ function stripNonSpoken(text) {
     .trim();
 }
 
-async function callElevenLabs(text) {
+async function callElevenLabs(text, voiceId, voiceSettings) {
   const apiKey = process.env.ELEVENLABS_API_KEY;
-  const voiceId = process.env.ELEVENLABS_VOICE_ID;
   if (!apiKey) throw new Error("ELEVENLABS_API_KEY not configured");
-  if (!voiceId) throw new Error("ELEVENLABS_VOICE_ID not configured");
+  if (!voiceId) throw new Error("ElevenLabs voice ID missing");
 
   const url = `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`;
   const res = await fetch(url, {
@@ -27,12 +27,7 @@ async function callElevenLabs(text) {
     body: JSON.stringify({
       text,
       model_id: "eleven_multilingual_v2",
-      voice_settings: {
-        stability: 0.45,
-        similarity_boost: 0.75,
-        style: 0.6,
-        use_speaker_boost: true,
-      },
+      voice_settings: voiceSettings,
     }),
   });
 
@@ -46,27 +41,31 @@ async function callElevenLabs(text) {
 }
 
 export default async function handler(req, res) {
+  const huntSlug = huntSlugFromReq(req);
+  if (!huntSlug) return res.status(400).json({ error: "Invalid hunt slug" });
+
   const { locationId, mode, fresh } = req.query || {};
   if (!locationId || !["clue", "success"].includes(mode)) {
     return res.status(400).json({ error: "locationId and mode ('clue' or 'success') required" });
   }
 
-  const audioKey = `hunt:audio:${locationId}:${mode}`;
+  const audioKey = `hunt:${huntSlug}:audio:${locationId}:${mode}`;
   const bypassCache = fresh === "1";
 
   let base64 = bypassCache ? null : await kv.get(audioKey);
 
   if (!base64) {
-    const state = await getState();
+    const state = await getState(huntSlug);
     const text = state.guideCache?.[locationId]?.[mode];
     if (!text) {
       return res.status(400).json({ error: "No guide text yet — generate the clue first" });
     }
 
     try {
+      const { voiceId, voiceSettings } = await getVoiceConfig(huntSlug);
       const spoken = stripNonSpoken(text);
       if (!spoken) throw new Error("Nothing to speak after stripping stage directions");
-      const buffer = await callElevenLabs(spoken);
+      const buffer = await callElevenLabs(spoken, voiceId, voiceSettings);
       if (!buffer || buffer.length < 1024) {
         throw new Error(`Suspiciously small audio response (${buffer?.length ?? 0} bytes)`);
       }

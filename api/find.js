@@ -1,16 +1,19 @@
-import { getState, setState } from "../lib/state.js";
+import { getState, setState, huntSlugFromReq } from "../lib/state.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
+  const huntSlug = huntSlugFromReq(req);
+  if (!huntSlug) return res.status(400).json({ error: "Invalid hunt slug" });
+
   const { familyId, locationId } = req.body || {};
   if (!familyId || !locationId) {
     return res.status(400).json({ error: "familyId and locationId required" });
   }
 
-  const state = await getState();
+  const state = await getState(huntSlug);
 
   const familyExists = state.families.some((f) => f.id === familyId);
   if (!familyExists) {
@@ -35,6 +38,6 @@ export default async function handler(req, res) {
     foundAt: new Date().toISOString(),
   });
 
-  await setState(state);
+  await setState(state, huntSlug);
   return res.status(200).json({ message: "Find recorded", state });
 }

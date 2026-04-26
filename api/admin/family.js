@@ -1,4 +1,4 @@
-import { getState, setState } from "../../lib/state.js";
+import { getState, setState, huntSlugFromReq } from "../../lib/state.js";
 
 function checkAdmin(req) {
   const key = req.query?.key || req.headers?.authorization?.replace("Bearer ", "");
@@ -18,8 +18,11 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
+  const huntSlug = huntSlugFromReq(req);
+  if (!huntSlug) return res.status(400).json({ error: "Invalid hunt slug" });
+
   const { action, name, familyId } = req.body || {};
-  const state = await getState();
+  const state = await getState(huntSlug);
 
   if (action === "add") {
     if (!name || !name.trim()) {
@@ -31,7 +34,7 @@ export default async function handler(req, res) {
       createdAt: new Date().toISOString(),
     };
     state.families.push(newFamily);
-    await setState(state);
+    await setState(state, huntSlug);
     return res.status(200).json({ message: "Family added", family: newFamily, state });
   }
 
@@ -41,7 +44,7 @@ export default async function handler(req, res) {
     }
     state.families = state.families.filter((f) => f.id !== familyId);
     state.finds = state.finds.filter((f) => f.familyId !== familyId);
-    await setState(state);
+    await setState(state, huntSlug);
     return res.status(200).json({ message: "Family removed", state });
   }
 

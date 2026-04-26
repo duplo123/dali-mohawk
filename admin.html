@@ -114,6 +114,9 @@
   <script>
     // -------- State --------
     let adminKey = new URL(location.href).searchParams.get("key") || "";
+    // ?hunt=<slug> selects which hunt this admin session manages.
+    // Defaults to "mohawk" so existing bookmarks keep working.
+    const HUNT_SLUG = (new URL(location.href).searchParams.get("hunt") || "mohawk").toLowerCase();
     let state = null;
 
     // -------- DOM helpers --------
@@ -140,7 +143,8 @@
 
     // -------- API --------
     async function api(path, { method = "GET", body } = {}) {
-      const url = path + (path.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(adminKey);
+      const sep1 = path.includes("?") ? "&" : "?";
+      const url = `${path}${sep1}key=${encodeURIComponent(adminKey)}&hunt=${encodeURIComponent(HUNT_SLUG)}`;
       const opts = { method, headers: {} };
       if (body !== undefined) {
         opts.headers["Content-Type"] = "application/json";

@@ -1,5 +1,5 @@
 import { kv } from "@vercel/kv";
-import { getState, setState } from "../../lib/state.js";
+import { getState, setState, huntSlugFromReq } from "../../lib/state.js";
 
 function checkAdmin(req) {
   const key = req.query?.key || req.headers?.authorization?.replace("Bearer ", "");
@@ -15,15 +15,19 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
+  const huntSlug = huntSlugFromReq(req);
+  if (!huntSlug) return res.status(400).json({ error: "Invalid hunt slug" });
+
+  const audioGlob = `hunt:${huntSlug}:audio:*`;
   const { scope, familyId } = req.body || {};
-  const state = await getState();
+  const state = await getState(huntSlug);
 
   if (scope === "family") {
     if (!familyId) {
       return res.status(400).json({ error: "familyId required for family reset" });
     }
     state.finds = state.finds.filter((f) => f.familyId !== familyId);
-    await setState(state);
+    await setState(state, huntSlug);
     return res.status(200).json({ message: "Family finds reset", state });
   }
 
@@ -32,8 +36,8 @@ export default async function handler(req, res) {
     state.families = [];
     state.guideCache = {};
     state.audioVersion = (state.audioVersion || 0) + 1;
-    await setState(state);
-    const audioKeys = await kv.keys("hunt:audio:*");
+    await setState(state, huntSlug);
+    const audioKeys = await kv.keys(audioGlob);
     if (audioKeys.length) await kv.del(...audioKeys);
     return res.status(200).json({ message: "Everything reset (locations kept)", state });
   }
@@ -42,8 +46,8 @@ export default async function handler(req, res) {
   if (scope === "guide" || scope === "ogre") {
     state.guideCache = {};
     state.audioVersion = (state.audioVersion || 0) + 1;
-    await setState(state);
-    const audioKeys = await kv.keys("hunt:audio:*");
+    await setState(state, huntSlug);
+    const audioKeys = await kv.keys(audioGlob);
     if (audioKeys.length) await kv.del(...audioKeys);
     return res.status(200).json({ message: "Guide cache flushed", state });
   }
