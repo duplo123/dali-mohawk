@@ -39,23 +39,14 @@
     <!-- Admin content -->
     <div id="adminContent" class="hidden space-y-8">
 
-      <!-- Hunts list -->
-      <section>
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-lg font-bold">🎨 Hunts</h2>
-          <button id="refreshHuntsBtn" class="text-xs text-slate-400 hover:text-slate-200">↻ refresh</button>
-        </div>
-        <div id="huntsList" class="space-y-2"></div>
-      </section>
-
       <!-- Create a hunt -->
       <section>
         <details id="builderDetails" class="bg-slate-800/40 border border-slate-700 rounded-lg">
-          <summary class="cursor-pointer px-4 py-3 font-semibold">✨ Create a new hunt with AI</summary>
+          <summary class="cursor-pointer px-4 py-3 font-semibold">✨ Create a new hunt</summary>
           <div class="p-4 space-y-4 border-t border-slate-700">
             <div>
               <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Slug <span class="text-slate-500">(URL-safe, lowercase, e.g. <code class="text-slate-300">halloween-2026</code>)</span></label>
-              <input id="builderSlug" type="text" placeholder="halloween-2026" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono" />
+              <input id="builderSlug" type="text" placeholder="halloween-2026" autocorrect="off" autocapitalize="off" spellcheck="false" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm font-mono" />
             </div>
             <div>
               <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Creative brief</label>
@@ -80,6 +71,15 @@
             <div id="builderResult" class="hidden border-t border-slate-700 pt-4"></div>
           </div>
         </details>
+      </section>
+
+      <!-- Hunts list -->
+      <section>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-lg font-bold">🎨 Hunts</h2>
+          <button id="refreshHuntsBtn" class="text-xs text-slate-400 hover:text-slate-200">↻ refresh</button>
+        </div>
+        <div id="huntsList" class="space-y-2"></div>
       </section>
 
       <!-- Summary / seed -->
@@ -297,7 +297,12 @@
     }
 
     async function submitBuilder() {
-      const slug = $("builderSlug").value.trim().toLowerCase();
+      // Normalize Unicode dashes (en-dash, em-dash, minus, etc.) to ASCII hyphen.
+      // macOS "smart dashes" auto-correct converts typed - into – which fails the
+      // server's [a-z0-9-] regex. Quietly fix it here so user input "just works".
+      const slug = $("builderSlug").value.trim().toLowerCase()
+        .replace(/[‐-―−]/g, "-");
+      $("builderSlug").value = slug;
       const userPrompt = $("builderPrompt").value.trim();
       const instructions = $("builderInstructions").value.trim();
       const destinations = readDests();
